@@ -2,13 +2,15 @@
 node_modules/
 browse/dist/
 design/dist/
-bin/gstack-global-discover
+bin/kstack-state
+.kstack/
 .gstack/
 .claude/skills/
 .agents/
 .context/
 extension/.auth.json
 .gstack-worktrees/
+.kstack-worktrees/
 /tmp/
 *.log
 bun.lock

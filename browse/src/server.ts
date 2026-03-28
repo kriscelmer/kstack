@@ -8,8 +8,8 @@
  *   Auto-shutdown after BROWSE_IDLE_TIMEOUT (default 30 min)
  *
  * State:
- *   State file: <project-root>/.gstack/browse.json (set via BROWSE_STATE_FILE env)
- *   Log files:  <project-root>/.gstack/browse-{console,network,dialog}.log
+ *   State file: <project-root>/.kstack/browse.json (set via BROWSE_STATE_FILE env)
+ *   Log files:  <project-root>/.kstack/browse-{console,network,dialog}.log
  *   Port:       random 10000-60000 (or BROWSE_PORT env for debug override)
  */
 
@@ -117,7 +117,7 @@ interface SidebarSession {
   lastActiveAt: string;
 }
 
-const SESSIONS_DIR = path.join(process.env.HOME || '/tmp', '.gstack', 'sidebar-sessions');
+const SESSIONS_DIR = path.join(process.env.HOME || '/tmp', '.kstack', 'sidebar-sessions');
 const AGENT_TIMEOUT_MS = 300_000; // 5 minutes — multi-page tasks need time
 const MAX_QUEUE = 5;
 
@@ -130,12 +130,12 @@ let currentMessage: string | null = null;
 let chatBuffer: ChatEntry[] = [];
 let chatNextId = 0;
 
-// Find the browse binary for the claude subprocess system prompt
+// Find the browse binary for the side-panel agent system prompt
 function findBrowseBin(): string {
   const candidates = [
     path.resolve(__dirname, '..', 'dist', 'browse'),
-    path.resolve(__dirname, '..', '..', '.claude', 'skills', 'gstack', 'browse', 'dist', 'browse'),
-    path.join(process.env.HOME || '', '.claude', 'skills', 'gstack', 'browse', 'dist', 'browse'),
+    path.resolve(__dirname, '..', '..', '.agents', 'skills', 'kstack', 'browse', 'dist', 'browse'),
+    path.join(process.env.HOME || '', '.codex', 'skills', 'kstack', 'browse', 'dist', 'browse'),
   ];
   for (const c of candidates) {
     try { if (fs.existsSync(c)) return c; } catch {}
@@ -186,7 +186,7 @@ function shortenPath(str: string): string {
     .replace(new RegExp(BROWSE_BIN.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'g'), '$B')
     .replace(/\/Users\/[^/]+/g, '~')
     .replace(/\/conductor\/workspaces\/[^/]+\/[^/]+/g, '')
-    .replace(/\.claude\/skills\/gstack\//g, '')
+    .replace(/\.codex\/skills\/kstack\//g, '')
     .replace(/browse\/dist\/browse/g, '$B');
 }
 
@@ -250,7 +250,7 @@ function createWorktree(sessionId: string): string | null {
     if (gitCheck.exitCode !== 0) return null;
     const repoRoot = gitCheck.stdout.toString().trim();
 
-    const worktreeDir = path.join(process.env.HOME || '/tmp', '.gstack', 'worktrees', sessionId.slice(0, 8));
+    const worktreeDir = path.join(process.env.HOME || '/tmp', '.kstack', 'worktrees', sessionId.slice(0, 8));
 
     // Clean up if dir exists from prior crash
     if (fs.existsSync(worktreeDir)) {
@@ -415,7 +415,7 @@ function spawnClaude(userMessage: string, extensionUrl?: string | null): void {
   // fails with ENOENT on everything, including /bin/bash). Instead,
   // write the command to a queue file that the sidebar-agent process
   // (running as non-compiled bun) picks up and spawns claude.
-  const agentQueue = process.env.SIDEBAR_QUEUE_PATH || path.join(process.env.HOME || '/tmp', '.gstack', 'sidebar-agent-queue.jsonl');
+  const agentQueue = process.env.SIDEBAR_QUEUE_PATH || path.join(process.env.HOME || '/tmp', '.kstack', 'sidebar-agent-queue.jsonl');
   const gstackDir = path.dirname(agentQueue);
   const entry = JSON.stringify({
     ts: new Date().toISOString(),
@@ -742,7 +742,7 @@ async function shutdown() {
   await browserManager.close();
 
   // Clean up Chromium profile locks (prevent SingletonLock on next launch)
-  const profileDir = path.join(process.env.HOME || '/tmp', '.gstack', 'chromium-profile');
+  const profileDir = path.join(process.env.HOME || '/tmp', '.kstack', 'chromium-profile');
   for (const lockFile of ['SingletonLock', 'SingletonSocket', 'SingletonCookie']) {
     try { fs.unlinkSync(path.join(profileDir, lockFile)); } catch {}
   }
@@ -773,7 +773,7 @@ function emergencyCleanup() {
   // Save session state so chat history persists across crashes
   try { saveSession(); } catch {}
   // Clean Chromium profile locks
-  const profileDir = path.join(process.env.HOME || '/tmp', '.gstack', 'chromium-profile');
+  const profileDir = path.join(process.env.HOME || '/tmp', '.kstack', 'chromium-profile');
   for (const lockFile of ['SingletonLock', 'SingletonSocket', 'SingletonCookie']) {
     try { fs.unlinkSync(path.join(profileDir, lockFile)); } catch {}
   }

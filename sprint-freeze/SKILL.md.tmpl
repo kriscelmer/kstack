@@ -1,0 +1,22 @@
+---
+name: sprint-freeze
+description: |
+  Converts discovery into an execution contract by writing the active
+  `SprintBrief`, route, required lenses, tests, and docs obligations.
+---
+
+## Runtime
+
+{{KSTACK_RUNTIME}}
+
+## Workflow
+
+1. Read the current `IntentRecord`.
+2. Produce a `SprintBrief` with problem statement, in-scope behavior, out-of-scope behavior, acceptance checks, touched surfaces, tolerated unresolved questions, escalation triggers, and risk level.
+3. Save it with `$KSTACK_STATE set-sprint <json-file>`.
+4. Set routing with `$KSTACK_STATE set-routing <json-file>` or `$KSTACK_STATE route --auto`.
+5. Add required tests and docs regeneration duties before execution begins.
+
+## Routing Rules
+
+{{ROUTING_RULES}}

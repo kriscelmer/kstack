@@ -1,0 +1,16 @@
+#!/usr/bin/env bash
+# kstack-review-log — atomically log a workflow finding/report record
+set -euo pipefail
+
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+eval "$("$SCRIPT_DIR/kstack-slug" 2>/dev/null)"
+KSTACK_HOME="${KSTACK_HOME:-${GSTACK_HOME:-$HOME/.kstack}}"
+mkdir -p "$KSTACK_HOME/projects/$SLUG"
+
+INPUT="${1:?Usage: kstack-review-log '<json>'}"
+if ! printf '%s' "$INPUT" | node -e "JSON.parse(require('fs').readFileSync(0, 'utf8'))" >/dev/null 2>&1; then
+  echo "kstack-review-log: invalid JSON, skipping" >&2
+  exit 1
+fi
+
+echo "$INPUT" >> "$KSTACK_HOME/projects/$SLUG/$BRANCH-reviews.jsonl"

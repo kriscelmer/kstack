@@ -1,0 +1,38 @@
+#!/usr/bin/env bash
+# kstack-extension — helper to install the Chrome side panel extension
+set -euo pipefail
+
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+REPO_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
+
+EXT_DIR=""
+if [ -f "$REPO_ROOT/extension/manifest.json" ]; then
+  EXT_DIR="$REPO_ROOT/extension"
+elif [ -f "$HOME/.codex/skills/kstack/extension/manifest.json" ]; then
+  EXT_DIR="$HOME/.codex/skills/kstack/extension"
+fi
+
+if [ -z "$EXT_DIR" ]; then
+  echo "Error: extension/ directory not found." >&2
+  exit 1
+fi
+
+echo -n "$EXT_DIR" | pbcopy 2>/dev/null || true
+
+PORT=""
+STATE_FILE="$REPO_ROOT/.kstack/browse.json"
+if [ -f "$STATE_FILE" ]; then
+  PORT=$(grep -o '"port":[0-9]*' "$STATE_FILE" | grep -o '[0-9]*' || true)
+fi
+
+echo "kstack Chrome Extension Setup"
+echo "============================="
+echo ""
+echo "Extension path: $EXT_DIR"
+[ -n "$PORT" ] && echo "Browse server port: $PORT"
+echo ""
+echo "1. Open chrome://extensions"
+echo "2. Enable Developer mode"
+echo "3. Click Load unpacked"
+echo "4. Pick $EXT_DIR"
+echo "5. Open the side panel and use port ${PORT:-<check browse status>}"
