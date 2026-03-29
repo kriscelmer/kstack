@@ -33,7 +33,7 @@ Most AI coding workflows drift because intent is stored in chat, planning is sto
 
 `kstack` fixes that by treating workflow state as a real artifact in the repo, not as a side effect of a conversation.
 
-For the deeper rationale, read [docs/kstack-concept.md](/Users/krzysztofcelmer/Documents/codex/kstack/docs/kstack-concept.md).
+For the deeper rationale, read [docs/kstack-concept.md](docs/kstack-concept.md).
 
 ## Git, GitHub, and KStack
 
@@ -49,7 +49,7 @@ That means:
 - GitHub owns the PR, reviews, Actions, and required checks.
 - KStack owns the semantic execution contract for that branch.
 
-The full model is documented in [docs/git-github-integration.md](/Users/krzysztofcelmer/Documents/codex/kstack/docs/git-github-integration.md).
+The full model is documented in [docs/git-github-integration.md](docs/git-github-integration.md).
 
 ## Public Command Surface
 
@@ -177,7 +177,7 @@ That installs one public Codex runtime root:
 ~/.codex/skills/kstack
 ```
 
-For the full installation guide, including prerequisites, verification, repo-local development installs, upgrades, uninstall, troubleshooting, and first-use bootstrap in a new repo, read [docs/installation-guide.md](/Users/krzysztofcelmer/Documents/codex/kstack/docs/installation-guide.md).
+For the full installation guide, including prerequisites, verification, repo-local development installs, upgrades, uninstall, troubleshooting, and first-use bootstrap in a new repo, read [docs/installation-guide.md](docs/installation-guide.md).
 
 ## Typical Usage Scenario
 
@@ -196,7 +196,7 @@ Example: you create a new repo for an onboarding idea, add it to Codex App, and 
 
 That intent-update cycle is a first-class part of the model, not an exception.
 
-For a detailed end-to-end scenario, including multiple intent update cycles, read [docs/typical-workflow.md](/Users/krzysztofcelmer/Documents/codex/kstack/docs/typical-workflow.md).
+For a detailed end-to-end scenario, including multiple intent update cycles, read [docs/typical-workflow.md](docs/typical-workflow.md).
 
 ## Runtime Layout
 
@@ -221,9 +221,9 @@ Templates live in `*/SKILL.md.tmpl`. Generated outputs should never be edited di
 
 ## Documentation Map
 
-- [docs/installation-guide.md](/Users/krzysztofcelmer/Documents/codex/kstack/docs/installation-guide.md)
-- [docs/typical-workflow.md](/Users/krzysztofcelmer/Documents/codex/kstack/docs/typical-workflow.md)
-- [docs/kstack-concept.md](/Users/krzysztofcelmer/Documents/codex/kstack/docs/kstack-concept.md)
-- [docs/git-github-integration.md](/Users/krzysztofcelmer/Documents/codex/kstack/docs/git-github-integration.md)
-- [docs/skills.md](/Users/krzysztofcelmer/Documents/codex/kstack/docs/skills.md)
-- [docs/migration-to-kstack.md](/Users/krzysztofcelmer/Documents/codex/kstack/docs/migration-to-kstack.md)
+- [docs/installation-guide.md](docs/installation-guide.md)
+- [docs/typical-workflow.md](docs/typical-workflow.md)
+- [docs/kstack-concept.md](docs/kstack-concept.md)
+- [docs/git-github-integration.md](docs/git-github-integration.md)
+- [docs/skills.md](docs/skills.md)
+- [docs/migration-to-kstack.md](docs/migration-to-kstack.md)
