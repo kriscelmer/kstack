@@ -112,6 +112,35 @@ Legacy wrappers are still available for migration, but they are also routed thro
 - `/kstack plan-design-review`
 - `/kstack autoplan`
 
+## Environment Prerequisites
+
+Before installing `kstack`, make sure the environment can support the routed Codex workflow.
+
+Required:
+
+- Git installed and available in the shell
+- Bun installed and available either on `PATH` or at `~/.bun/bin/bun`
+- Codex installed and logged in
+- write access to `~/.codex/skills/`
+- write access to `~/.kstack/`
+
+Expected runtime context:
+
+- You use Codex as the host runtime. `kstack` does not support Claude, Gemini, or Kiro.
+- Repositories should be git repos so branch-local workflow state can be stored at `.kstack/state/<branch>.json`.
+- Browser-driven subcommands like `/kstack qa` and `/kstack browse` need the local browser runtime generated during `bun run build`.
+
+Quick verification:
+
+```bash
+git --version
+~/.bun/bin/bun --version
+codex --version
+codex login
+```
+
+If `bun` is already on your `PATH`, `bun --version` is enough.
+
 ## Installation
 
 Quick start:
