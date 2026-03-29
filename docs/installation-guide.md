@@ -138,6 +138,7 @@ Run:
 
 That command:
 
+- creates or switches the unborn branch to `main` if the repo has no commits yet
 - ensures `.kstack/state/` exists for the current branch
 - ensures `.kstack/reports/` exists
 - writes or updates a managed KStack block in repo-local `AGENTS.md`

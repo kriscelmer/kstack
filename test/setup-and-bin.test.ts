@@ -33,9 +33,9 @@ describe('setup and bin compatibility', () => {
     expect(fs.existsSync(path.join(codexHome, 'skills', 'kstack'))).toBe(false);
   });
 
-  test('kstack-init bootstraps repo-local AGENTS instructions and state', () => {
+  test('kstack-init bootstraps repo-local AGENTS instructions, state, and unborn main', () => {
     const repoRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'kstack-init-'));
-    execFileSync('git', ['init', '-b', 'main'], { cwd: repoRoot });
+    execFileSync('git', ['init', '-b', 'trunk'], { cwd: repoRoot });
     execFileSync('git', ['config', 'user.email', 'test@example.com'], { cwd: repoRoot });
     execFileSync('git', ['config', 'user.name', 'Test User'], { cwd: repoRoot });
 
@@ -44,12 +44,18 @@ describe('setup and bin compatibility', () => {
       encoding: 'utf-8',
     });
     const parsed = JSON.parse(output);
+    const branch = execFileSync('git', ['symbolic-ref', '--short', 'HEAD'], { cwd: repoRoot, encoding: 'utf-8' }).trim();
 
     expect(fs.existsSync(path.join(repoRoot, '.kstack', 'state'))).toBe(true);
     expect(fs.existsSync(path.join(repoRoot, 'AGENTS.md'))).toBe(true);
     const agents = fs.readFileSync(path.join(repoRoot, 'AGENTS.md'), 'utf-8');
     expect(agents).toContain('<!-- KSTACK:BEGIN -->');
     expect(agents).toContain('/kstack implement');
+    expect(branch).toBe('main');
+    expect(parsed.branch).toBe('main');
+    expect(parsed.normalized_branch).toBe('main');
+    expect(parsed.initialized_main_branch).toBe(true);
+    expect(parsed.state_file).toContain(path.join('.kstack', 'state', 'main.json'));
     expect(parsed.next_steps).toEqual(['/kstack discover', '/kstack sprint-freeze', '/kstack implement']);
   });
 

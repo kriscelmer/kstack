@@ -158,6 +158,8 @@ export function getRepoRoot(startDir: string = process.cwd()): string {
 }
 
 export function getCurrentBranch(repoRoot: string = getRepoRoot()): string {
+  const symbolic = runGit(['symbolic-ref', '--quiet', '--short', 'HEAD'], repoRoot);
+  if (symbolic) return symbolic;
   return runGit(['rev-parse', '--abbrev-ref', 'HEAD'], repoRoot) || 'detached-head';
 }
 

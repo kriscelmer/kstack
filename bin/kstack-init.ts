@@ -13,6 +13,43 @@ function ensureGitRepo(repoRoot: string): void {
   throw new Error('kstack-init must be run inside a git repository.');
 }
 
+function runGit(args: string[], repoRoot: string): { exitCode: number; stdout: string; stderr: string } {
+  const proc = Bun.spawnSync(['git', ...args], {
+    cwd: repoRoot,
+    stdout: 'pipe',
+    stderr: 'pipe',
+    timeout: 3000,
+  });
+
+  return {
+    exitCode: proc.exitCode,
+    stdout: proc.stdout.toString().trim(),
+    stderr: proc.stderr.toString().trim(),
+  };
+}
+
+function repoHasCommits(repoRoot: string): boolean {
+  return runGit(['rev-parse', '--verify', 'HEAD'], repoRoot).exitCode === 0;
+}
+
+function ensurePrimaryBranch(repoRoot: string, preferredBranch: string = 'main'): { branch: string; created: boolean } {
+  if (repoHasCommits(repoRoot)) {
+    return { branch: getCurrentBranch(repoRoot), created: false };
+  }
+
+  const currentBranch = getCurrentBranch(repoRoot);
+  if (currentBranch === preferredBranch) {
+    return { branch: preferredBranch, created: false };
+  }
+
+  const setHead = runGit(['symbolic-ref', 'HEAD', `refs/heads/${preferredBranch}`], repoRoot);
+  if (setHead.exitCode !== 0) {
+    throw new Error(`Failed to initialize ${preferredBranch} branch: ${setHead.stderr || 'unknown git error'}`);
+  }
+
+  return { branch: preferredBranch, created: true };
+}
+
 function managedAgentsBlock(normalizedBranch: string): string {
   return [
     MANAGED_BEGIN,
@@ -63,6 +100,7 @@ function upsertAgentsFile(repoRoot: string, normalizedBranch: string): { file: s
 function main(): void {
   const repoRoot = getRepoRoot(process.cwd());
   ensureGitRepo(repoRoot);
+  const branchBootstrap = ensurePrimaryBranch(repoRoot);
 
   const paths = resolveWorkflowPaths(repoRoot);
   ensureWorkflowState(paths, 'kstack-init');
@@ -73,6 +111,7 @@ function main(): void {
     repo_root: repoRoot,
     branch,
     normalized_branch: paths.normalizedBranch,
+    initialized_main_branch: branchBootstrap.created,
     state_file: paths.stateFile,
     reports_dir: paths.reportsDir,
     agents_file: agentsResult.file,

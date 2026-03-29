@@ -6,6 +6,7 @@ import {
   appendDeltaRecord,
   createEmptyWorkflowState,
   ensureWorkflowState,
+  getCurrentBranch,
   inferRoutingFromFiles,
   normalizeBranchName,
   resolveWorkflowPaths,
@@ -19,6 +20,13 @@ describe('workflow-state', () => {
     expect(normalizeBranchName('feature/hello world')).toBe('feature-hello-world');
     expect(normalizeBranchName('refs/heads/main')).toBe('main');
     expect(normalizeBranchName('HEAD')).toBe('detached-head');
+  });
+
+  test('reads symbolic unborn branch names before first commit', () => {
+    const repoRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'kstack-unborn-'));
+    Bun.spawnSync(['git', 'init', '-b', 'trunk'], { cwd: repoRoot, stdout: 'pipe', stderr: 'pipe' });
+
+    expect(getCurrentBranch(repoRoot)).toBe('trunk');
   });
 
   test('creates canonical state and records legacy migration sources', () => {

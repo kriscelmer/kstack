@@ -46,7 +46,7 @@ For the deeper rationale, read [docs/kstack-concept.md](/Users/krzysztofcelmer/D
 Every KStack operation is routed through that entrypoint:
 
 - `/kstack` or `/kstack help` explains usage and lists subcommands
-- `/kstack init` bootstraps a repo so Codex knows where workflow truth lives
+- `/kstack init` bootstraps a repo so Codex knows where workflow truth lives and creates or switches to unborn `main` in an empty repo
 - `/kstack discover` captures intent
 - `/kstack sprint-freeze` writes the active sprint contract
 - `/kstack implement` reads the frozen sprint and starts coding against it
@@ -91,7 +91,7 @@ Truth precedence:
 | Command | Purpose |
 | --- | --- |
 | `/kstack` | Help mode. Explain the workflow and list subcommands. |
-| `/kstack init` | Bootstrap repo-local KStack state and `AGENTS.md` guidance. |
+| `/kstack init` | Bootstrap repo-local KStack state and `AGENTS.md` guidance, and normalize empty repos onto unborn `main`. |
 | `/kstack discover` | Capture ambiguity and write the current `IntentRecord`. |
 | `/kstack sprint-freeze` | Freeze the execution contract as a `SprintBrief`. |
 | `/kstack implement` | Read the frozen sprint and implement against it. |
@@ -166,7 +166,7 @@ For the full installation guide, including prerequisites, verification, repo-loc
 Example: you create a new repo for an onboarding idea, add it to Codex App, and want the workflow to survive intent changes.
 
 1. Run `/kstack` to confirm the routed command surface.
-2. Run `/kstack init` in the repo to create `.kstack/state/` and repo-local `AGENTS.md` guidance.
+2. Run `/kstack init` in the repo to create or switch to unborn `main`, create `.kstack/state/`, and write repo-local `AGENTS.md` guidance.
 3. Run `/kstack discover` to capture the real pain, examples, goals, non-goals, and candidate wedge.
 4. Run `/kstack sprint-freeze` to turn that into a bounded execution contract.
 5. Run `/kstack implement` to code against the frozen sprint.

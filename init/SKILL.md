@@ -22,10 +22,13 @@ $KSTACK_STATE ensure >/dev/null 2>&1 || true
 
 `/kstack init` makes a repository KStack-aware. It should be the first KStack command used in a brand-new project repo.
 
+If the repo has no commits yet and no usable working branch, init should create or switch the unborn branch to `main` before writing state.
+
 ## Workflow
 
 1. Run `$KSTACK_BIN/kstack-init`.
 2. Explain what was created or updated:
+   - unborn `main` branch, if the repo was still branchless in practice after `git init`
    - `.kstack/state/`
    - `.kstack/reports/`
    - `.gitignore` entry for `.kstack/`

@@ -14,7 +14,7 @@ Run `/kstack` or `/kstack help` when you need to discover the available operatio
 
 | Command | Purpose |
 | --- | --- |
-| `/kstack init` | Bootstrap `.kstack/state/` and repo-local `AGENTS.md` guidance. |
+| `/kstack init` | Bootstrap `.kstack/state/`, repo-local `AGENTS.md` guidance, and unborn `main` in empty repos. |
 | `/kstack discover` | Capture intent and ambiguity once. |
 | `/kstack sprint-freeze` | Lock the active execution contract. |
 | `/kstack implement` | Read the current sprint and implement against it. |
