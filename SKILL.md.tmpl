@@ -1,15 +1,35 @@
 ---
 name: kstack
 description: |
-  Codex-first workflow pack for repo-local discovery, sprint freezing, review,
-  QA, and shipping. Use when the user wants to operate the kstack workflow or
-  needs the shared browser/runtime tooling.
+  Codex-first workflow router for repo-local discovery, sprint freezing,
+  implementation, review, QA, and shipping. Invoke as `/kstack <subcommand>`.
 ---
+
+## How To Use `/kstack`
+
+This is the only public KStack skill. All KStack actions are invoked through it.
+
+Examples:
+
+- `/kstack init`
+- `/kstack discover`
+- `/kstack sprint-freeze`
+- `/kstack implement`
+- `/kstack review`
+- `/kstack qa`
+- `/kstack ship`
+
+If the user invokes `/kstack` with no subcommand, or `/kstack help`, explain usage and list the available subcommands. Do not mutate repo state in help mode.
+
+If the user invokes `/kstack <subcommand>`:
+
+1. Read the internal subcommand guide at `$KSTACK_ROOT/<subcommand>/SKILL.md`.
+2. Follow that guide instead of improvising from chat memory.
+3. If the subcommand is unknown, return help and show the supported commands.
 
 ## Canonical State
 
-`kstack` keeps one canonical workflow state per branch at `.kstack/state/<normalized-branch>.json`.
-Use that state to carry intent, sprint scope, routing, findings, tests, and doc obligations.
+`kstack` keeps one canonical workflow state per branch at `.kstack/state/<normalized-branch>.json`. Use that state to carry intent, sprint scope, routing, findings, tests, and doc obligations.
 
 {{WORKFLOW_PRECEDENCE}}
 

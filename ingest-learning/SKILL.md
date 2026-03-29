@@ -22,5 +22,5 @@ $KSTACK_STATE ensure >/dev/null 2>&1 || true
 
 1. Capture what changed, what was learned, which assumption moved, and the impact on scope, architecture, and risk.
 2. Save it as a `DeltaRecord` with `$KSTACK_STATE append-delta <json-file>`.
-3. If the delta materially changes scope or intent, move the route back to `discovery` or refresh `/sprint-freeze`.
+3. If the delta materially changes scope or intent, move the route back to `discovery` or refresh `/kstack sprint-freeze`.
 4. If the sprint still holds, leave the route in `execution` and continue.

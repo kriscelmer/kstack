@@ -183,7 +183,7 @@ lean toward AUTO-FIX (they're more mechanical).
 
 ## Fix-First Heuristic
 
-This heuristic is referenced by both `/review` and `/ship`. It determines whether
+This heuristic is referenced by both `/kstack review` and `/kstack ship`. It determines whether
 the agent auto-fixes a finding or asks the user.
 
 ```

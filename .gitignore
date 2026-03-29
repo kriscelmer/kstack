@@ -3,6 +3,7 @@ node_modules/
 browse/dist/
 design/dist/
 bin/kstack-state
+bin/kstack-init
 .kstack/
 .gstack/
 .claude/skills/

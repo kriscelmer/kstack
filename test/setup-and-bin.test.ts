@@ -21,7 +21,7 @@ describe('setup and bin compatibility', () => {
     });
 
     expect(fs.existsSync(path.join(codexHome, 'skills', 'kstack'))).toBe(true);
-    expect(fs.existsSync(path.join(codexHome, 'skills', 'discover'))).toBe(true);
+    expect(fs.existsSync(path.join(codexHome, 'skills', 'discover'))).toBe(false);
     expect(fs.existsSync(path.join(home, '.kstack'))).toBe(true);
 
     execFileSync('bash', ['bin/kstack-uninstall', '--force'], {
@@ -31,6 +31,26 @@ describe('setup and bin compatibility', () => {
     });
 
     expect(fs.existsSync(path.join(codexHome, 'skills', 'kstack'))).toBe(false);
+  });
+
+  test('kstack-init bootstraps repo-local AGENTS instructions and state', () => {
+    const repoRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'kstack-init-'));
+    execFileSync('git', ['init', '-b', 'main'], { cwd: repoRoot });
+    execFileSync('git', ['config', 'user.email', 'test@example.com'], { cwd: repoRoot });
+    execFileSync('git', ['config', 'user.name', 'Test User'], { cwd: repoRoot });
+
+    const output = execFileSync(BUN, ['run', path.join(ROOT, 'bin/kstack-init.ts')], {
+      cwd: repoRoot,
+      encoding: 'utf-8',
+    });
+    const parsed = JSON.parse(output);
+
+    expect(fs.existsSync(path.join(repoRoot, '.kstack', 'state'))).toBe(true);
+    expect(fs.existsSync(path.join(repoRoot, 'AGENTS.md'))).toBe(true);
+    const agents = fs.readFileSync(path.join(repoRoot, 'AGENTS.md'), 'utf-8');
+    expect(agents).toContain('<!-- KSTACK:BEGIN -->');
+    expect(agents).toContain('/kstack implement');
+    expect(parsed.next_steps).toEqual(['/kstack discover', '/kstack sprint-freeze', '/kstack implement']);
   });
 
   test('config and review log wrappers read the same state', () => {

@@ -68,10 +68,6 @@ function withoutFrontmatter(content: string): string {
   return content.slice(end + 5);
 }
 
-function codexSkillName(relDir: string): string {
-  return relDir === '.' || relDir === '' ? 'kstack' : relDir;
-}
-
 function shortDescription(description: string): string {
   const singleLine = description.replace(/\s+/g, ' ').trim();
   return singleLine.length <= 120 ? singleLine : `${singleLine.slice(0, 117).trimEnd()}...`;
@@ -170,7 +166,7 @@ function buildSkillIndex(templates: Array<{ tmpl: string }>): string {
       const relDir = path.dirname(tmpl);
       const frontmatter = extractFrontmatter(readText(path.join(ROOT, tmpl)));
       const firstSentence = frontmatter.description.split('. ')[0]?.trim() || frontmatter.description;
-      return { command: `/${relDir}`, summary: firstSentence.endsWith('.') ? firstSentence : `${firstSentence}.` };
+      return { command: `/kstack ${relDir}`, summary: firstSentence.endsWith('.') ? firstSentence : `${firstSentence}.` };
     })
     .sort((left, right) => left.command.localeCompare(right.command))
     .map(({ command, summary }) => `| \`${command}\` | ${summary} |`)
@@ -232,13 +228,28 @@ function linkOrCopy(source: string, target: string): void {
   }
 }
 
-function materializeRuntimeRoot(): void {
+function materializeRuntimeRoot(templates: Array<{ tmpl: string }>): void {
   if (DRY_RUN) return;
 
   const runtimeRoot = path.join(ROOT, '.agents', 'skills', 'kstack');
   ensureDir(runtimeRoot);
 
-  const assets = ['bin', 'browse', 'review', 'README.md', 'ARCHITECTURE.md', 'AGENTS.md', 'CLAUDE.md', 'VERSION', 'CHANGELOG.md', 'docs'];
+  const skillDirs = templates
+    .map(({ tmpl }) => path.dirname(tmpl))
+    .filter((dir) => dir !== '.');
+
+  const assets = [
+    'bin',
+    'browse',
+    'README.md',
+    'ARCHITECTURE.md',
+    'AGENTS.md',
+    'CLAUDE.md',
+    'VERSION',
+    'CHANGELOG.md',
+    'docs',
+    ...skillDirs,
+  ];
   for (const asset of assets) {
     const source = path.join(ROOT, asset);
     if (!fs.existsSync(source)) continue;
@@ -270,7 +281,7 @@ const replacements = {
   ROUTING_RULES: renderRoutingRules(),
 };
 
-const expectedSkillDirs = new Set<string>();
+const expectedSkillDirs = new Set<string>(['kstack']);
 const results: string[] = [];
 
 for (const { tmpl, output } of templates) {
@@ -281,20 +292,18 @@ for (const { tmpl, output } of templates) {
   const changed = writeFileIfChanged(path.join(ROOT, output), finalContent);
   results.push(`${changed ? 'STALE' : 'FRESH'}: ${output}`);
 
-  const relDir = path.dirname(tmpl);
-  const skillDir = codexSkillName(relDir);
-  expectedSkillDirs.add(skillDir);
-
-  const agentSkillPath = path.join(ROOT, '.agents', 'skills', skillDir, 'SKILL.md');
-  const agentYamlPath = path.join(ROOT, '.agents', 'skills', skillDir, 'agents', 'openai.yaml');
-  const fm = extractFrontmatter(rendered);
-  const agentChanged = writeFileIfChanged(agentSkillPath, finalContent);
-  writeFileIfChanged(agentYamlPath, openAiYaml(fm.name, fm.description));
-  results.push(`${agentChanged ? 'STALE' : 'FRESH'}: .agents/skills/${skillDir}/SKILL.md`);
+  if (tmpl === 'SKILL.md.tmpl') {
+    const agentSkillPath = path.join(ROOT, '.agents', 'skills', 'kstack', 'SKILL.md');
+    const agentYamlPath = path.join(ROOT, '.agents', 'skills', 'kstack', 'agents', 'openai.yaml');
+    const fm = extractFrontmatter(rendered);
+    const agentChanged = writeFileIfChanged(agentSkillPath, finalContent);
+    writeFileIfChanged(agentYamlPath, openAiYaml(fm.name, fm.description));
+    results.push(`${agentChanged ? 'STALE' : 'FRESH'}: .agents/skills/kstack/SKILL.md`);
+  }
 }
 
 removeStaleGeneratedSkills(expectedSkillDirs);
-materializeRuntimeRoot();
+materializeRuntimeRoot(templates);
 
 for (const line of results) {
   console.log(line);

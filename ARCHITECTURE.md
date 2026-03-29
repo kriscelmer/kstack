@@ -138,6 +138,20 @@ If chat and state conflict, the answer is not “remember harder”. The answer 
 - `.agents/skills/kstack/` is the repo-local Codex runtime root used in development.
 - `~/.codex/skills/kstack` is the installed Codex runtime root.
 
+## Public Command Routing
+
+`kstack` exposes one public skill:
+
+- `/kstack`
+
+That root skill is a router.
+
+- Bare `/kstack` and `/kstack help` are help mode. They explain the workflow and list supported subcommands.
+- `/kstack <subcommand>` loads the internal guide at `.agents/skills/kstack/<subcommand>/SKILL.md` or the repo-local equivalent during development.
+- There are no public top-level skills like `/discover` or `/review`. Those remain internal subcommand guides so the public namespace stays coherent.
+
+This matters because the routed entrypoint makes the workflow self-describing. New users only need to remember one command prefix, and new repos can be bootstrapped with `/kstack init`.
+
 ## Browser Runtime
 
 The browse architecture is intentionally preserved:
@@ -153,8 +167,9 @@ The browser runtime is not the workflow brain. It is a verification runtime that
 Every `SKILL.md` file is generated from a `SKILL.md.tmpl` source. The generator writes:
 
 - in-repo `SKILL.md`
-- `.agents/skills/<skill>/SKILL.md`
-- `.agents/skills/<skill>/agents/openai.yaml`
+- `.agents/skills/kstack/SKILL.md` for the public router
+- `.agents/skills/kstack/<subcommand>/SKILL.md` for routed subcommands
+- `.agents/skills/kstack/agents/openai.yaml` for the public router
 
 The root runtime directory `.agents/skills/kstack/` also links shared runtime assets such as:
 
@@ -171,7 +186,8 @@ The install model is:
 
 - source checkout in a repo
 - generated runtime under `.agents/skills/kstack`
-- installed runtime under `~/.codex/skills/kstack`
+- installed public runtime under `~/.codex/skills/kstack`
+- internal subcommand guides nested under that runtime root
 - compatibility wrappers kept only where migration cost is low
 
 The repo no longer treats Claude, Gemini, or Kiro as equal host targets.

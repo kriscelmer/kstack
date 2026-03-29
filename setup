@@ -77,11 +77,14 @@ fi
 
 mkdir -p "$REPO_ROOT/.agents/skills/kstack"
 
-for skill_dir in "$REPO_ROOT/.agents/skills"/*; do
-  [ -d "$skill_dir" ] || continue
-  skill_name="$(basename "$skill_dir")"
-  ln -snf "$skill_dir" "$CODEX_SKILLS/$skill_name"
+# Remove legacy direct subcommand installs. KStack is now routed via `/kstack ...`.
+for tmpl in "$REPO_ROOT"/*/SKILL.md.tmpl; do
+  [ -f "$tmpl" ] || continue
+  skill_name="$(basename "$(dirname "$tmpl")")"
+  rm -rf "$CODEX_SKILLS/$skill_name"
 done
+
+ln -snf "$REPO_ROOT/.agents/skills/kstack" "$CODEX_SKILLS/kstack"
 
 if [ -f "$HOME/.gstack/config.yaml" ] && [ ! -f "$HOME/.kstack/config.yaml" ]; then
   cp "$HOME/.gstack/config.yaml" "$HOME/.kstack/config.yaml"

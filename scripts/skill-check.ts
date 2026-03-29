@@ -73,14 +73,26 @@ console.log('');
 console.log('generated Codex runtime');
 for (const { tmpl } of templates) {
   const dir = path.dirname(tmpl);
-  const skillDir = dir === '.' ? 'kstack' : dir;
-  const target = path.join(ROOT, '.agents', 'skills', skillDir, 'SKILL.md');
+  const target = dir === '.'
+    ? path.join(ROOT, '.agents', 'skills', 'kstack', 'SKILL.md')
+    : path.join(ROOT, '.agents', 'skills', 'kstack', dir, 'SKILL.md');
   if (!fs.existsSync(target)) {
     failed = true;
-    console.log(`FAIL  .agents/skills/${skillDir}/SKILL.md missing`);
+    console.log(`FAIL  ${path.relative(ROOT, target)} missing`);
     continue;
   }
-  console.log(`OK    .agents/skills/${skillDir}/SKILL.md`);
+  console.log(`OK    ${path.relative(ROOT, target)}`);
+}
+
+const topLevelAgents = path.join(ROOT, '.agents', 'skills');
+if (fs.existsSync(topLevelAgents)) {
+  for (const entry of fs.readdirSync(topLevelAgents, { withFileTypes: true })) {
+    if (!entry.isDirectory()) continue;
+    if (entry.name !== 'kstack') {
+      failed = true;
+      console.log(`FAIL  .agents/skills/${entry.name} should not exist as a public top-level skill`);
+    }
+  }
 }
 
 process.exit(failed ? 1 : 0);

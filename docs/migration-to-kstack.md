@@ -5,23 +5,29 @@
 - The project was rebranded from `gstack` to `kstack`.
 - Codex is the only supported host.
 - The old planning ceremony was replaced by canonical repo-local workflow state.
+- The public command surface was collapsed into one routed skill, `/kstack`.
 - Public binaries now use `kstack-*` and `KSTACK_*`.
 - `gstack-*` binaries remain as compatibility wrappers only.
 - `/codex` was removed.
 
 ## New Canonical Commands
 
-- `/discover`
-- `/sprint-freeze`
-- `/ingest-learning`
+- `/kstack`
+- `/kstack init`
+- `/kstack discover`
+- `/kstack sprint-freeze`
+- `/kstack implement`
+- `/kstack ingest-learning`
+
+Bare `/kstack` behaves like help and explains the supported routed subcommands.
 
 ## Legacy Wrappers Still Supported
 
-- `/office-hours`
-- `/plan-ceo-review`
-- `/plan-eng-review`
-- `/plan-design-review`
-- `/autoplan`
+- `/kstack office-hours`
+- `/kstack plan-ceo-review`
+- `/kstack plan-eng-review`
+- `/kstack plan-design-review`
+- `/kstack autoplan`
 
 ## State Migration
 

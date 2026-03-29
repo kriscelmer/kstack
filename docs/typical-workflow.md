@@ -11,6 +11,16 @@ The core idea is simple:
 - execution generates evidence
 - ingest-learning updates intent or assumptions when reality changes
 
+## Phase 0: Repo Bootstrap
+
+In a new repo, start with:
+
+```text
+/kstack init
+```
+
+That makes the repo KStack-aware by ensuring `.kstack/state/` exists and by writing repo-local `AGENTS.md` guidance so Codex knows where workflow truth lives.
+
 ## Example Scenario
 
 Assume the user says:
@@ -27,7 +37,7 @@ That request is useful, but still incomplete:
 
 ## Phase 1: Discovery
 
-Run `/discover`.
+Run `/kstack discover`.
 
 The job here is not to start coding. The job is to write a high-quality `IntentRecord`.
 
@@ -46,7 +56,7 @@ At the end of discovery, the system should know whether the work is still too va
 
 ## Phase 2: Sprint Freeze
 
-Run `/sprint-freeze`.
+Run `/kstack sprint-freeze`.
 
 Now the system writes the `SprintBrief`:
 
@@ -65,16 +75,22 @@ That distinction matters.
 
 ## Phase 3: Execution
 
-With a sprint frozen, implementation begins.
+With a sprint frozen, implementation begins through:
+
+```text
+/kstack implement
+```
+
+That command exists to make the handoff explicit. Codex should read the current branch state, treat the active `SprintBrief` as the execution contract, and implement against that contract instead of relying on a vague recollection of the chat thread.
 
 Typical execution sequence:
 
 1. change code
 2. run tests
-3. run `/review`
-4. run `/qa`
-5. run `/cso` if relevant
-6. run `/document-release`
+3. run `/kstack review`
+4. run `/kstack qa`
+5. run `/kstack cso` if relevant
+6. run `/kstack document-release`
 
 Each of those updates the same canonical state.
 
@@ -94,7 +110,7 @@ It is new information that changes the assumptions behind the sprint.
 
 ### What To Do
 
-Run `/ingest-learning`.
+Run `/kstack ingest-learning`.
 
 That writes a `DeltaRecord`:
 
@@ -136,12 +152,12 @@ New learning:
 
 ### Result
 
-Run `/ingest-learning`.
+Run `/kstack ingest-learning`.
 
 Then either:
 
-- refresh `/sprint-freeze` with two entry paths
-- or reopen `/discover` if the product ask has fundamentally widened
+- refresh `/kstack sprint-freeze` with two entry paths
+- or reopen `/kstack discover` if the product ask has fundamentally widened
 
 ## Why This Matters
 
@@ -158,27 +174,29 @@ Most teams update the plan informally and keep coding. That makes the codebase a
 
 ```text
 user request
-  -> /discover
-  -> /sprint-freeze
-  -> implementation
-  -> /review
-  -> /qa
-  -> /ingest-learning (if assumptions changed)
-  -> /sprint-freeze again (if needed)
+  -> /kstack init
+  -> /kstack discover
+  -> /kstack sprint-freeze
+  -> /kstack implement
+  -> /kstack review
+  -> /kstack qa
+  -> /kstack ingest-learning (if assumptions changed)
+  -> /kstack sprint-freeze again (if needed)
   -> implementation continues
-  -> /document-release
-  -> /ship
+  -> /kstack document-release
+  -> /kstack ship
 ```
 
 ## Anti-Patterns
 
 Avoid these:
 
-- treating `/discover` as optional when the request is still fuzzy
+- treating `/kstack discover` as optional when the request is still fuzzy
 - freezing a sprint and then silently changing scope in code
 - leaving QA findings in screenshots or chat only
-- using `/ingest-learning` as a note-taking tool instead of a routing decision point
+- using `/kstack ingest-learning` as a note-taking tool instead of a routing decision point
 - shipping from chat memory instead of `.kstack/state`
+- expecting `/kstack discover` and `/kstack sprint-freeze` to automatically start coding without an explicit `/kstack implement`
 
 ## Rule Of Thumb
 

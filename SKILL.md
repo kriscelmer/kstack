@@ -1,17 +1,37 @@
 ---
 name: kstack
 description: |
-  Codex-first workflow pack for repo-local discovery, sprint freezing, review,
-  QA, and shipping. Use when the user wants to operate the kstack workflow or
-  needs the shared browser/runtime tooling.
+  Codex-first workflow router for repo-local discovery, sprint freezing,
+  implementation, review, QA, and shipping. Invoke as `/kstack <subcommand>`.
 ---
 <!-- AUTO-GENERATED from SKILL.md.tmpl — do not edit directly -->
 <!-- Regenerate: bun run gen:skill-docs -->
 
+## How To Use `/kstack`
+
+This is the only public KStack skill. All KStack actions are invoked through it.
+
+Examples:
+
+- `/kstack init`
+- `/kstack discover`
+- `/kstack sprint-freeze`
+- `/kstack implement`
+- `/kstack review`
+- `/kstack qa`
+- `/kstack ship`
+
+If the user invokes `/kstack` with no subcommand, or `/kstack help`, explain usage and list the available subcommands. Do not mutate repo state in help mode.
+
+If the user invokes `/kstack <subcommand>`:
+
+1. Read the internal subcommand guide at `$KSTACK_ROOT/<subcommand>/SKILL.md`.
+2. Follow that guide instead of improvising from chat memory.
+3. If the subcommand is unknown, return help and show the supported commands.
+
 ## Canonical State
 
-`kstack` keeps one canonical workflow state per branch at `.kstack/state/<normalized-branch>.json`.
-Use that state to carry intent, sprint scope, routing, findings, tests, and doc obligations.
+`kstack` keeps one canonical workflow state per branch at `.kstack/state/<normalized-branch>.json`. Use that state to carry intent, sprint scope, routing, findings, tests, and doc obligations.
 
 1. `code`, `tests`, and `config` are the source of truth for behavior.
 2. `.kstack/state/<branch>.json` is the source of truth for workflow intent, sprint scope, routing, and findings.
@@ -46,41 +66,44 @@ $KSTACK_STATE route --auto
 
 | Command | Purpose |
 | --- | --- |
-| `/autoplan` | Deprecated wrapper that runs the product, architecture, and design lenses
+| `/kstack autoplan` | Deprecated wrapper that runs the product, architecture, and design lenses
 against the shared canonical state. |
-| `/browse` | Headless browser skill for fast QA, visual verification, screenshots, form
+| `/kstack browse` | Headless browser skill for fast QA, visual verification, screenshots, form
 testing, and repro capture. |
-| `/careful` | Safety wrapper for destructive commands. |
-| `/cso` | Security review and threat-model skill that records normalized security
+| `/kstack careful` | Safety wrapper for destructive commands. |
+| `/kstack cso` | Security review and threat-model skill that records normalized security
 findings against the canonical workflow state. |
-| `/design-review` | Visual QA and polish skill for frontend work. |
-| `/discover` | Discovery workflow that captures ambiguous requests into one canonical
+| `/kstack design-review` | Visual QA and polish skill for frontend work. |
+| `/kstack discover` | Discovery workflow that captures ambiguous requests into one canonical
 `IntentRecord` in `.kstack/state`. |
-| `/document-release` | Post-change documentation sync that updates README, architecture, and workflow
+| `/kstack document-release` | Post-change documentation sync that updates README, architecture, and workflow
 docs to match what actually shipped. |
-| `/freeze` | Constrains edits to one directory or module. |
-| `/guard` | Combined careful plus freeze mode. |
-| `/ingest-learning` | Delta-ingest workflow that appends new learnings after review, QA, or user
+| `/kstack freeze` | Constrains edits to one directory or module. |
+| `/kstack guard` | Combined careful plus freeze mode. |
+| `/kstack implement` | Execute the frozen sprint by reading the current branch state and coding
+against the active `SprintBrief`, not against chat memory alone. |
+| `/kstack ingest-learning` | Delta-ingest workflow that appends new learnings after review, QA, or user
 feedback and decides whether to continue execution or reopen discovery. |
-| `/investigate` | Root-cause debugging workflow. |
-| `/office-hours` | Deprecated wrapper for discovery. |
-| `/plan-ceo-review` | Deprecated wrapper for the product lens. |
-| `/plan-design-review` | Deprecated wrapper for the design lens. |
-| `/plan-eng-review` | Deprecated wrapper for the architecture lens. |
-| `/qa` | Browser-driven QA that finds defects, fixes them in source, and re-verifies.
+| `/kstack init` | Repo bootstrap for KStack. |
+| `/kstack investigate` | Root-cause debugging workflow. |
+| `/kstack office-hours` | Deprecated wrapper for discovery. |
+| `/kstack plan-ceo-review` | Deprecated wrapper for the product lens. |
+| `/kstack plan-design-review` | Deprecated wrapper for the design lens. |
+| `/kstack plan-eng-review` | Deprecated wrapper for the architecture lens. |
+| `/kstack qa` | Browser-driven QA that finds defects, fixes them in source, and re-verifies.
 Use when the user wants test-fix-verify on a web experience. |
-| `/qa-only` | Browser-driven QA that reports defects without changing code. |
-| `/review` | Pre-landing code review focused on bugs, regressions, and missing validation.
+| `/kstack qa-only` | Browser-driven QA that reports defects without changing code. |
+| `/kstack review` | Pre-landing code review focused on bugs, regressions, and missing validation.
 Use when reviewing a diff before merge or when the user asks for a PR review. |
-| `/setup-browser-cookies` | Imports cookies from a real Chromium profile into the headless browse session
+| `/kstack setup-browser-cookies` | Imports cookies from a real Chromium profile into the headless browse session
 so authenticated QA can run inside kstack. |
-| `/ship` | Shipping workflow that checks canonical state, validation, docs, and merge
+| `/kstack ship` | Shipping workflow that checks canonical state, validation, docs, and merge
 readiness before creating the final commit or PR. |
-| `/sprint-freeze` | Converts discovery into an execution contract by writing the active
+| `/kstack sprint-freeze` | Converts discovery into an execution contract by writing the active
 `SprintBrief`, route, required lenses, tests, and docs obligations. |
-| `/unfreeze` | Clears a previously declared freeze boundary so edits can continue anywhere in
+| `/kstack unfreeze` | Clears a previously declared freeze boundary so edits can continue anywhere in
 the repository again. |
-| `/upgrade` | Updates the local kstack checkout or installation and explains what changed.
+| `/kstack upgrade` | Updates the local kstack checkout or installation and explains what changed.
 Use when the user asks to update kstack itself. |
 
 ## Routing Rules

@@ -2,7 +2,7 @@
 name: plan-ceo-review
 description: |
   Deprecated wrapper for the product lens. Use only for legacy workflows;
-  otherwise prefer `/sprint-freeze` plus the `product` lens.
+  otherwise prefer `/kstack sprint-freeze` plus the `product` lens.
 ---
 <!-- AUTO-GENERATED from plan-ceo-review/SKILL.md.tmpl — do not edit directly -->
 <!-- Regenerate: bun run gen:skill-docs -->

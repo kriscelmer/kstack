@@ -37,7 +37,13 @@ If `bun` is already on your PATH, `bun --version` is enough.
 
 ## Global Installation
 
-This is the normal installation mode.
+This is the normal installation mode. It installs one public Codex skill root:
+
+```text
+~/.codex/skills/kstack
+```
+
+All KStack operations are then invoked as `/kstack <subcommand>`.
 
 ### 1. Clone the repo
 
@@ -68,8 +74,9 @@ This generates:
 
 - compiled browse binaries under `browse/dist/`
 - compiled `kstack-state` under `bin/kstack-state`
+- compiled `kstack-init` under `bin/kstack-init`
 - generated skill docs in the repo
-- generated Codex runtime files under `.agents/skills/`
+- generated Codex runtime files under `.agents/skills/kstack/`
 
 ### 4. Install into Codex
 
@@ -80,9 +87,6 @@ This generates:
 This creates or updates:
 
 - `~/.codex/skills/kstack`
-- `~/.codex/skills/discover`
-- `~/.codex/skills/sprint-freeze`
-- other generated skill directories
 - `~/.kstack/`
 
 ### 5. Verify installation
@@ -91,8 +95,6 @@ Check that the runtime exists:
 
 ```bash
 ls ~/.codex/skills/kstack
-ls ~/.codex/skills/discover
-ls ~/.codex/skills/sprint-freeze
 ```
 
 Check local health:
@@ -100,6 +102,68 @@ Check local health:
 ```bash
 BUN_BIN="${BUN_BIN:-$HOME/.bun/bin/bun}" "$BUN_BIN" test
 BUN_BIN="${BUN_BIN:-$HOME/.bun/bin/bun}" "$BUN_BIN" run skill:check
+```
+
+Then verify the command surface inside Codex:
+
+1. Open a new Codex thread in any repo.
+2. Run `/kstack`.
+3. Confirm that it behaves like help and lists the available subcommands.
+
+## First Use In A New Repo
+
+Installing KStack globally only makes the routed skill available. It does not automatically bootstrap each repository you work on.
+
+For a new project repo:
+
+### 1. Create the repo
+
+```bash
+mkdir my-new-project
+cd my-new-project
+git init
+```
+
+### 2. Add the repo to Codex App
+
+Open the repo as a project in Codex App so Codex can operate inside the repo root.
+
+### 3. Bootstrap repo-local workflow guidance
+
+Run:
+
+```text
+/kstack init
+```
+
+That command:
+
+- ensures `.kstack/state/` exists for the current branch
+- ensures `.kstack/reports/` exists
+- writes or updates a managed KStack block in repo-local `AGENTS.md`
+- tells Codex that workflow truth lives in `.kstack/state/<branch>.json`
+- prints the next steps for discovery, sprint freeze, and implementation
+
+### 4. Start the normal workflow
+
+From there, the usual sequence is:
+
+```text
+/kstack discover
+/kstack sprint-freeze
+/kstack implement
+```
+
+If QA or user feedback changes the assumptions behind the sprint, use:
+
+```text
+/kstack ingest-learning
+```
+
+Then refresh the sprint if needed:
+
+```text
+/kstack sprint-freeze
 ```
 
 ## Repo-Local Development Install
@@ -206,6 +270,16 @@ Then re-run:
 
 ```bash
 ./setup --force
+```
+
+If the install is correct but the old direct commands still appear in your mental model, remember that KStack is now routed through one public skill:
+
+```text
+/kstack
+/kstack help
+/kstack discover
+/kstack sprint-freeze
+/kstack implement
 ```
 
 ### I changed templates but Codex still sees old skill content

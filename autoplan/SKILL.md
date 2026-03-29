@@ -20,7 +20,7 @@ $KSTACK_STATE ensure >/dev/null 2>&1 || true
 
 ## Wrapper Behavior
 
-1. Ensure an `IntentRecord` exists. If not, run the `/discover` flow first.
+1. Ensure an `IntentRecord` exists. If not, run the `/kstack discover` flow first.
 2. Refresh the sprint brief if it is missing or stale.
 3. Populate `product`, `architecture`, and `design` lens assessments in state.
 4. Return a concise summary of the accepted decisions, rejected options, and unresolved risk.

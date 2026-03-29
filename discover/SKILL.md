@@ -22,7 +22,7 @@ $KSTACK_STATE ensure >/dev/null 2>&1 || true
 
 1. Gather the raw request, user pain, goals, non-goals, constraints, examples, hypotheses, candidate wedges, and open questions.
 2. Write them as an `IntentRecord` with `$KSTACK_STATE set-intent <json-file>`.
-3. If there is enough clarity to execute, recommend `/sprint-freeze`. If not, keep the route in `discovery`.
+3. If there is enough clarity to execute, recommend `/kstack sprint-freeze`. If not, keep the route in `discovery`.
 
 ## Routing Rules
 

@@ -21,6 +21,7 @@ BUN_BIN="${BUN_BIN:-$HOME/.bun/bin/bun}" "$BUN_BIN" test
 - refreshes `.agents/skills/kstack`
 - compiles the browse CLI
 - compiles `kstack-state`
+- compiles `kstack-init`
 
 ## Repository Rules
 
@@ -67,10 +68,12 @@ before shipping doc or workflow changes.
 
 The important workflow pattern is:
 
-1. template describes the skill behavior
-2. generator produces in-repo `SKILL.md`
-3. generator produces `.agents/skills/<skill>/SKILL.md`
-4. Codex setup exposes those generated skills under `~/.codex/skills/`
+1. the root template describes the routed `/kstack` entrypoint
+2. subcommand templates describe `/kstack <subcommand>` behavior
+3. the generator produces in-repo `SKILL.md` files
+4. the generator produces `.agents/skills/kstack/SKILL.md` for the public router
+5. the generator produces `.agents/skills/kstack/<subcommand>/SKILL.md` for internal routed guides
+6. `./setup` exposes only `~/.codex/skills/kstack` as the public skill
 
 Do not hand-edit generated skill output.
 

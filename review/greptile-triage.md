@@ -1,6 +1,6 @@
 # Greptile Comment Triage
 
-Shared reference for fetching, filtering, and classifying Greptile review comments on GitHub PRs. Both `/review` (Step 2.5) and `/ship` (Step 3.75) reference this document.
+Shared reference for fetching, filtering, and classifying Greptile review comments on GitHub PRs. Both `/kstack review` (Step 2.5) and `/kstack ship` (Step 3.75) reference this document.
 
 ---
 
@@ -34,8 +34,8 @@ The `position != null` filter on line-level comments automatically skips outdate
 
 Derive the project-specific history path:
 ```bash
-REMOTE_SLUG=$(browse/bin/remote-slug 2>/dev/null || ~/.claude/skills/gstack/browse/bin/remote-slug 2>/dev/null || basename "$(git rev-parse --show-toplevel 2>/dev/null || pwd)")
-PROJECT_HISTORY="$HOME/.gstack/projects/$REMOTE_SLUG/greptile-history.md"
+REMOTE_SLUG=$(browse/bin/remote-slug 2>/dev/null || ~/.codex/skills/kstack/browse/bin/remote-slug 2>/dev/null || basename "$(git rev-parse --show-toplevel 2>/dev/null || pwd)")
+PROJECT_HISTORY="$HOME/.kstack/projects/$REMOTE_SLUG/greptile-history.md"
 ```
 
 Read `$PROJECT_HISTORY` if it exists (per-project suppressions). Each line records a previous triage outcome:
@@ -183,14 +183,14 @@ When classifying comments, also assess whether Greptile's implied severity match
 
 Before writing, ensure both directories exist:
 ```bash
-REMOTE_SLUG=$(browse/bin/remote-slug 2>/dev/null || ~/.claude/skills/gstack/browse/bin/remote-slug 2>/dev/null || basename "$(git rev-parse --show-toplevel 2>/dev/null || pwd)")
-mkdir -p "$HOME/.gstack/projects/$REMOTE_SLUG"
-mkdir -p ~/.gstack
+REMOTE_SLUG=$(browse/bin/remote-slug 2>/dev/null || ~/.codex/skills/kstack/browse/bin/remote-slug 2>/dev/null || basename "$(git rev-parse --show-toplevel 2>/dev/null || pwd)")
+mkdir -p "$HOME/.kstack/projects/$REMOTE_SLUG"
+mkdir -p ~/.kstack
 ```
 
 Append one line per triage outcome to **both** files (per-project for suppressions, global for retro):
-- `~/.gstack/projects/$REMOTE_SLUG/greptile-history.md` (per-project)
-- `~/.gstack/greptile-history.md` (global aggregate)
+- `~/.kstack/projects/$REMOTE_SLUG/greptile-history.md` (per-project)
+- `~/.kstack/greptile-history.md` (global aggregate)
 
 Format:
 ```
