@@ -15,4 +15,6 @@ description: |
 2. Make sure required tests are either satisfied or explicitly unresolved.
 3. Review open findings and block on high-severity unresolved issues.
 4. Update docs or note any deferred docs obligations.
-5. Only then proceed with versioning, commit, push, or PR creation.
+5. Refresh the branch contract with `$KSTACK_STATE export-contract`.
+6. Evaluate semantic readiness with `$KSTACK_STATE ready` and treat the projected contract as the semantic source of truth.
+7. Generate the PR body fragment with `$KSTACK_STATE export-pr` before versioning, commit, push, or PR creation.

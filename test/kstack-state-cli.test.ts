@@ -82,4 +82,57 @@ describe('kstack-state cli', () => {
     expect(summary).toContain('execution');
     expect(summary).toContain('Tests: 0/0 satisfied');
   });
+
+  test('exports a branch contract, renders a PR body, and evaluates readiness from the tracked projection', () => {
+    const intentFile = path.join(repoRoot, 'intent.json');
+    const sprintFile = path.join(repoRoot, 'sprint.json');
+
+    fs.writeFileSync(intentFile, JSON.stringify({
+      raw_request: 'Ship a projected branch contract',
+      user_pain_examples: ['PRs lack semantic context'],
+      goals: ['Track branch meaning'],
+      non_goals: ['Automate PR creation'],
+      constraints: ['Keep raw state local'],
+      hypotheses: ['Projected contracts reduce noise'],
+      candidate_wedges: ['Hybrid projections'],
+      open_questions: ['none'],
+      provenance: [{ source: 'test', timestamp: new Date().toISOString() }],
+    }));
+
+    fs.writeFileSync(sprintFile, JSON.stringify({
+      problem_statement: 'Git and GitHub need a semantic bridge.',
+      in_scope_behavior: ['Export a branch contract', 'Render a PR fragment'],
+      out_of_scope_behavior: ['Auto-open a draft PR'],
+      acceptance_checks: ['Contract JSON exists', 'PR body renders', 'Readiness works in CI'],
+      touched_surfaces: ['lib', 'bin', '.github/workflows'],
+      tolerated_unresolved_questions: [],
+      escalation_triggers: ['Contract becomes noisy'],
+      risk_level: 'medium',
+    }));
+
+    run(['ensure'], repoRoot);
+    run(['set-intent', intentFile], repoRoot);
+    run(['set-sprint', sprintFile], repoRoot);
+    run(['require-test', 'contract export'], repoRoot);
+    run(['satisfy-test', 'contract export'], repoRoot);
+
+    const exported = JSON.parse(run(['export-contract'], repoRoot));
+    const contractJsonPath = path.join(repoRoot, '.kstack', 'contracts', 'feature-ui-refresh.json');
+    const contractMarkdownPath = path.join(repoRoot, '.kstack', 'contracts', 'feature-ui-refresh.md');
+    const contractJson = JSON.parse(fs.readFileSync(contractJsonPath, 'utf-8'));
+    const prBody = run(['export-pr'], repoRoot);
+
+    expect(exported.status).toBe('ready-to-ship');
+    expect(fs.existsSync(contractJsonPath)).toBe(true);
+    expect(fs.existsSync(contractMarkdownPath)).toBe(true);
+    expect(contractJson.schema_version).toBe('branch-contract/v1');
+    expect(contractJson.readiness.status).toBe('ready-to-ship');
+    expect(prBody).toContain('## Branch Contract');
+    expect(prBody).toContain('### Problem Statement');
+
+    fs.rmSync(path.join(repoRoot, '.kstack', 'state'), { recursive: true, force: true });
+    const readyFromContract = JSON.parse(run(['ready', '--json', '--branch', 'feature/ui-refresh'], repoRoot));
+    expect(readyFromContract.status).toBe('ready-to-ship');
+    expect(readyFromContract.contract_json).toContain(path.join('.kstack', 'contracts', 'feature-ui-refresh.json'));
+  });
 });

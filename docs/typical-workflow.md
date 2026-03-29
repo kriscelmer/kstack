@@ -21,6 +21,12 @@ In a new repo, start with:
 
 That makes the repo KStack-aware by ensuring `.kstack/state/` exists and by writing repo-local `AGENTS.md` guidance so Codex knows where workflow truth lives.
 
+The preferred branch model is:
+
+1. start from a short-lived task branch
+2. keep one active intent and one active sprint on that branch
+3. if the work splits into two independent directions, split the branches too
+
 ## Example Scenario
 
 Assume the user says:
@@ -72,6 +78,14 @@ Now the system writes the `SprintBrief`:
 This is the contract for the current sprint, not for the entire product forever.
 
 That distinction matters.
+
+After sprint freeze:
+
+- export the branch contract with `bin/kstack-state export-contract`
+- generate the PR body fragment with `bin/kstack-state export-pr`
+- open a Draft PR
+
+That keeps GitHub aligned with the frozen semantic contract instead of waiting for a random later commit.
 
 ## Phase 3: Execution
 
@@ -177,6 +191,9 @@ user request
   -> /kstack init
   -> /kstack discover
   -> /kstack sprint-freeze
+  -> bin/kstack-state export-contract
+  -> bin/kstack-state export-pr
+  -> open Draft PR
   -> /kstack implement
   -> /kstack review
   -> /kstack qa
@@ -192,6 +209,7 @@ user request
 Avoid these:
 
 - treating `/kstack discover` as optional when the request is still fuzzy
+- using a long-lived integration branch as the place where multiple active sprint contracts pile up
 - freezing a sprint and then silently changing scope in code
 - leaving QA findings in screenshots or chat only
 - using `/kstack ingest-learning` as a note-taking tool instead of a routing decision point

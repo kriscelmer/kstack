@@ -27,6 +27,7 @@ BUN_BIN="${BUN_BIN:-$HOME/.bun/bin/bun}" "$BUN_BIN" test
 
 - Edit `*/SKILL.md.tmpl`, not generated `SKILL.md`.
 - Keep workflow truth in `.kstack/state/`, not ad hoc plan files.
+- Keep raw operational state in `.kstack/state/` and durable branch contracts in `.kstack/contracts/`.
 - Prefer `kstack-*` binaries and `KSTACK_*` environment variables in new code.
 - Leave `gstack-*` wrappers only for migration compatibility.
 - If intent changes mid-implementation, reflect that in docs and state-oriented code paths instead of encoding assumptions in chat-only prose.
@@ -53,6 +54,7 @@ The test suite covers:
 - generator freshness and output shape
 - Codex-only setup behavior
 - utility binaries and compatibility wrappers
+- contract projection and readiness evaluation
 - browse path resolution under `.kstack/`
 
 Run:

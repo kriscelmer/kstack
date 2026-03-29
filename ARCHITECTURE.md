@@ -10,6 +10,8 @@ That file is versioned through `WorkflowStateV1` and currently carries:
 
 - `intent_record`
 - `active_sprint_brief`
+- `active_sprint_revision`
+- `active_sprint_frozen_at`
 - `lens_assessments`
 - `accepted_decisions`
 - `rejected_options`
@@ -38,6 +40,12 @@ Traditional AI-assisted coding workflows scatter planning truth across:
 That makes the workflow hard to inspect and easy to drift. A reviewer can be reasoning from a stale plan while the implementation has already moved on.
 
 `kstack` treats workflow state as a first-class artifact inside the repo. Discovery, execution, QA, security, and release work all write into the same branch-local object.
+
+Git and GitHub still retain their normal roles:
+
+- Git is the source of code truth.
+- GitHub is the source of collaboration and enforcement.
+- KStack is the source of workflow truth for the branch.
 
 ## Discovery, Freeze, Delta
 
@@ -125,18 +133,46 @@ The system is opinionated about truth:
 
 1. `code`, `tests`, and config define actual behavior.
 2. `.kstack/state` defines workflow intent and current execution contract.
-3. `.kstack/reports/` holds projections derived from state plus evidence.
-4. chat context is advisory only.
+3. `.kstack/contracts/` holds durable, commitable branch contract projections.
+4. `.kstack/reports/` holds local evidence-oriented projections derived from state plus code.
+5. chat context is advisory only.
 
 If chat and state conflict, the answer is not “remember harder”. The answer is “update the state”.
 
 ## Runtime Layout
 
 - `.kstack/state/` stores canonical workflow state.
+- `.kstack/contracts/` stores tracked branch contract projections for Git and GitHub integration.
 - `.kstack/reports/` stores projections such as QA evidence or human-readable summaries.
 - `~/.kstack/` stores user-global config and install metadata.
 - `.agents/skills/kstack/` is the repo-local Codex runtime root used in development.
 - `~/.codex/skills/kstack` is the installed Codex runtime root.
+
+## Contract Projection Layer
+
+Raw workflow state is intentionally local and operational.
+
+Tracked branch contracts are separate:
+
+- source: `.kstack/state/<branch>.json`
+- outputs:
+  - `.kstack/contracts/<branch>.json`
+  - `.kstack/contracts/<branch>.md`
+
+This hybrid projection model keeps runtime state noisy and local while still giving Git and GitHub a durable semantic artifact to review.
+
+The projected contract is built from:
+
+- intent summary
+- active sprint summary
+- routing and risk
+- tests required vs satisfied
+- docs obligations
+- findings summary
+- delta summary since the last freeze
+- semantic readiness
+
+This is also the basis for PR body generation and the `kstack-ready` GitHub check.
 
 ## Public Command Routing
 
@@ -191,3 +227,16 @@ The install model is:
 - compatibility wrappers kept only where migration cost is low
 
 The repo no longer treats Claude, Gemini, or Kiro as equal host targets.
+
+## GitHub Integration
+
+KStack is GitHub-first in v1.
+
+The repository-level contract is:
+
+- Draft PR after `/kstack sprint-freeze`
+- PR description generated from the branch contract
+- `kstack-ready` complements CI by checking semantic readiness
+- existing Actions remain the mechanical gate layer
+
+This repo does not attempt to enforce branch protection or GitHub settings from code. Those remain repository settings, documented as recommendations.

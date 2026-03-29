@@ -4,7 +4,11 @@ browse/dist/
 design/dist/
 bin/kstack-state
 bin/kstack-init
-.kstack/
+# KSTACK:BEGIN
+.kstack/*
+!.kstack/contracts/
+!.kstack/contracts/**
+# KSTACK:END
 .gstack/
 .claude/skills/
 .agents/

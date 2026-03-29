@@ -1,0 +1,8 @@
+.github/workflows/* @kriscelmer
+AGENTS.md @kriscelmer
+README.md @kriscelmer
+docs/* @kriscelmer
+*/SKILL.md.tmpl @kriscelmer
+scripts/* @kriscelmer
+bin/* @kriscelmer
+lib/* @kriscelmer

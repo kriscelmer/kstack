@@ -44,8 +44,9 @@ These commands still exist for migration, but they write to the same canonical s
 
 1. `code`, `tests`, and config
 2. `.kstack/state/<branch>.json`
-3. `.kstack/reports/`
-4. conversation context
+3. `.kstack/contracts/<branch>.json`
+4. `.kstack/reports/`
+5. conversation context
 
 ## Build Commands
 
@@ -61,7 +62,8 @@ bun run skill:check
 
 - Edit `SKILL.md.tmpl` files, never generated `SKILL.md` files.
 - `kstack-state` is the canonical state interface for shell-driven skills.
-- Repo-local truth lives under `.kstack/`. Global config lives under `~/.kstack/`.
+- Raw repo-local workflow state lives under `.kstack/state/`, tracked branch contracts live under `.kstack/contracts/`, and local evidence artifacts live under `.kstack/reports/`.
+- Global config lives under `~/.kstack/`.
 - `gstack-*` binaries are compatibility wrappers only. New code should use `kstack-*`.
 - Public skill invocations use `/kstack <subcommand>`, not separate top-level skills.
 - If intent changes mid-sprint, do not just “keep going”. Capture the delta and re-freeze if needed.

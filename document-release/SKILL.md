@@ -22,5 +22,6 @@ $KSTACK_STATE ensure >/dev/null 2>&1 || true
 
 1. Read the diff and the current `.kstack/state` summary.
 2. Update docs that drifted from the shipped behavior.
-3. For every touched document, record it with `$KSTACK_STATE add-doc "<path>"`.
-4. If docs remain intentionally deferred, say that explicitly in the final summary.
+3. For every satisfied docs obligation, clear it with `$KSTACK_STATE resolve-doc "<path>"`.
+4. Refresh the projected branch contract with `$KSTACK_STATE export-contract`.
+5. If docs remain intentionally deferred, say that explicitly in the final summary.

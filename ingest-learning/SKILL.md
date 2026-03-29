@@ -24,3 +24,5 @@ $KSTACK_STATE ensure >/dev/null 2>&1 || true
 2. Save it as a `DeltaRecord` with `$KSTACK_STATE append-delta <json-file>`.
 3. If the delta materially changes scope or intent, move the route back to `discovery` or refresh `/kstack sprint-freeze`.
 4. If the sprint still holds, leave the route in `execution` and continue.
+5. Refresh the projected branch contract with `$KSTACK_STATE export-contract`.
+6. Check `$KSTACK_STATE ready` and call out explicitly if the branch now requires a re-freeze.

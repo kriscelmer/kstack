@@ -2,14 +2,17 @@ import * as crypto from 'crypto';
 import * as fs from 'fs';
 import * as os from 'os';
 import * as path from 'path';
+import { upsertKstackGitignore } from './kstack-gitignore';
 
 export const WORKFLOW_SCHEMA_VERSION = 'workflow-state/v1';
+export const BRANCH_CONTRACT_SCHEMA_VERSION = 'branch-contract/v1';
 
 export type RiskLevel = 'low' | 'medium' | 'high' | 'critical';
 export type EscalationStatus = 'none' | 'watch' | 'needs-human' | 'blocked';
 export type RoutingMode = 'discovery' | 'execution' | 'docs' | 'review' | 'qa' | 'security';
 export type LensName = 'product' | 'architecture' | 'design' | 'security';
 export type FindingStatus = 'open' | 'accepted' | 'fixed' | 'deferred' | 'duplicate';
+export type ReadinessStatus = 'draft' | 'ready-for-review' | 'ready-to-ship' | 'blocked';
 
 export interface ProvenanceEntry {
   source: string;
@@ -97,6 +100,8 @@ export interface WorkflowStateV1 {
   schema_version: typeof WORKFLOW_SCHEMA_VERSION;
   intent_record: IntentRecord | null;
   active_sprint_brief: SprintBrief | null;
+  active_sprint_revision: number;
+  active_sprint_frozen_at: string | null;
   lens_assessments: Partial<Record<LensName, LensAssessment>>;
   accepted_decisions: DecisionRecord[];
   rejected_options: DecisionRecord[];
@@ -112,6 +117,89 @@ export interface WorkflowStateV1 {
   provenance: WorkflowProvenance;
 }
 
+export interface ReadinessEvaluation {
+  status: ReadinessStatus;
+  blockers: string[];
+  requires_refreeze: boolean;
+  has_assurance_evidence: boolean;
+  summary: string;
+}
+
+export interface BranchContractV1 {
+  schema_version: typeof BRANCH_CONTRACT_SCHEMA_VERSION;
+  workflow_schema_version: typeof WORKFLOW_SCHEMA_VERSION;
+  branch: string;
+  normalized_branch: string;
+  generated_at: string;
+  state_file: string;
+  intent: {
+    present: boolean;
+    raw_request: string | null;
+    goals: string[];
+    non_goals: string[];
+    constraints: string[];
+    candidate_wedges: string[];
+    open_questions: string[];
+  };
+  sprint: {
+    present: boolean;
+    revision: number;
+    frozen_at: string | null;
+    problem_statement: string | null;
+    in_scope_behavior: string[];
+    out_of_scope_behavior: string[];
+    acceptance_checks: string[];
+    touched_surfaces: string[];
+    tolerated_unresolved_questions: string[];
+    escalation_triggers: string[];
+    risk_level: RiskLevel | null;
+  };
+  routing: RoutingDecision;
+  risk_level: RiskLevel;
+  tests: {
+    required: string[];
+    satisfied: string[];
+    missing: string[];
+  };
+  docs: {
+    queued: string[];
+  };
+  findings: {
+    total: number;
+    open: number;
+    blockers: number;
+    open_by_severity: Record<RiskLevel, number>;
+    items: Array<{
+      id: string;
+      source: string;
+      location: string;
+      kind: string;
+      severity: RiskLevel;
+      status: FindingStatus;
+    }>;
+  };
+  deltas_since_freeze: {
+    count: number;
+    latest_timestamp: string | null;
+    requires_refreeze: boolean;
+    items: Array<{
+      timestamp: string;
+      scope_impact: DeltaRecord['scope_impact'];
+      architecture_impact: DeltaRecord['architecture_impact'];
+      risk_impact: RiskLevel;
+      recommended_next_mode: RoutingMode;
+      what_changed: string[];
+      what_was_learned: string[];
+      assumption_changed: string[];
+      requires_refreeze: boolean;
+    }>;
+  };
+  readiness: ReadinessEvaluation;
+  pr: {
+    recommendation: ReadinessStatus;
+  };
+}
+
 export interface WorkflowPaths {
   repoRoot: string;
   branch: string;
@@ -119,7 +207,10 @@ export interface WorkflowPaths {
   stateRoot: string;
   stateDir: string;
   reportsDir: string;
+  contractsDir: string;
   stateFile: string;
+  contractJsonFile: string;
+  contractMarkdownFile: string;
   globalStateDir: string;
   legacyStateRoot: string;
   legacyGlobalStateDir: string;
@@ -172,12 +263,13 @@ export function getRemoteSlug(repoRoot: string = getRepoRoot()): string {
   return `${match[1]}-${match[2]}`.replace(/[^\w.-]+/g, '-');
 }
 
-export function resolveWorkflowPaths(repoRoot: string = getRepoRoot()): WorkflowPaths {
-  const branch = getCurrentBranch(repoRoot);
+export function resolveWorkflowPaths(repoRoot: string = getRepoRoot(), branchOverride?: string): WorkflowPaths {
+  const branch = branchOverride || getCurrentBranch(repoRoot);
   const normalizedBranch = normalizeBranchName(branch);
   const stateRoot = path.join(repoRoot, '.kstack');
   const stateDir = path.join(stateRoot, 'state');
   const reportsDir = path.join(stateRoot, 'reports');
+  const contractsDir = path.join(stateRoot, 'contracts');
   const globalStateDir = path.join(os.homedir(), '.kstack');
   return {
     repoRoot,
@@ -186,7 +278,10 @@ export function resolveWorkflowPaths(repoRoot: string = getRepoRoot()): Workflow
     stateRoot,
     stateDir,
     reportsDir,
+    contractsDir,
     stateFile: path.join(stateDir, `${normalizedBranch}.json`),
+    contractJsonFile: path.join(contractsDir, `${normalizedBranch}.json`),
+    contractMarkdownFile: path.join(contractsDir, `${normalizedBranch}.md`),
     globalStateDir,
     legacyStateRoot: path.join(repoRoot, '.gstack'),
     legacyGlobalStateDir: path.join(os.homedir(), '.gstack'),
@@ -215,6 +310,8 @@ export function createEmptyWorkflowState(
     schema_version: WORKFLOW_SCHEMA_VERSION,
     intent_record: null,
     active_sprint_brief: null,
+    active_sprint_revision: 0,
+    active_sprint_frozen_at: null,
     lens_assessments: {},
     accepted_decisions: [],
     rejected_options: [],
@@ -441,6 +538,8 @@ export function validateWorkflowState(value: unknown): WorkflowStateV1 {
     schema_version: WORKFLOW_SCHEMA_VERSION,
     intent_record: value.intent_record === null ? null : validateIntentRecord(value.intent_record),
     active_sprint_brief: value.active_sprint_brief === null ? null : validateSprintBrief(value.active_sprint_brief),
+    active_sprint_revision: typeof value.active_sprint_revision === 'number' ? value.active_sprint_revision : 0,
+    active_sprint_frozen_at: typeof value.active_sprint_frozen_at === 'string' ? value.active_sprint_frozen_at : null,
     lens_assessments: lensAssessments,
     accepted_decisions: (Array.isArray(value.accepted_decisions) ? value.accepted_decisions : []).map((entry, index) =>
       validateDecisionRecord(entry, `accepted_decisions[${index}]`),
@@ -475,14 +574,12 @@ export function validateWorkflowState(value: unknown): WorkflowStateV1 {
 export function ensureWorkflowDirs(paths: WorkflowPaths): void {
   fs.mkdirSync(paths.stateDir, { recursive: true });
   fs.mkdirSync(paths.reportsDir, { recursive: true });
+  fs.mkdirSync(paths.contractsDir, { recursive: true });
 
   const gitignorePath = path.join(paths.repoRoot, '.gitignore');
   try {
-    const content = fs.existsSync(gitignorePath) ? fs.readFileSync(gitignorePath, 'utf-8') : '';
-    if (!content.match(/^\.kstack\/?$/m)) {
-      const separator = content.length === 0 || content.endsWith('\n') ? '' : '\n';
-      fs.appendFileSync(gitignorePath, `${separator}.kstack/\n`);
-    }
+    void gitignorePath;
+    upsertKstackGitignore(paths.repoRoot);
   } catch {
     // Best effort only.
   }
@@ -597,6 +694,8 @@ export function setSprintBrief(
   source: string,
 ): WorkflowStateV1 {
   state.active_sprint_brief = sprint;
+  state.active_sprint_revision += 1;
+  state.active_sprint_frozen_at = now();
   state.risk_level = sprint.risk_level;
   recordSource(state, source, 'active_sprint_brief updated');
   return state;
@@ -671,6 +770,12 @@ export function addDocToRegenerate(state: WorkflowStateV1, docPath: string, sour
   return state;
 }
 
+export function resolveDocToRegenerate(state: WorkflowStateV1, docPath: string, source: string): WorkflowStateV1 {
+  state.docs_to_regenerate = state.docs_to_regenerate.filter(item => item !== docPath);
+  recordSource(state, source, `doc obligation resolved: ${docPath}`);
+  return state;
+}
+
 export function addAssumption(state: WorkflowStateV1, assumption: string, source: string): WorkflowStateV1 {
   appendUnique(state.assumptions, assumption);
   recordSource(state, source, `assumption added`);
@@ -715,6 +820,327 @@ export function addDecision(
 export function highestRisk(current: RiskLevel, candidate: RiskLevel): RiskLevel {
   const order: RiskLevel[] = ['low', 'medium', 'high', 'critical'];
   return order.indexOf(candidate) > order.indexOf(current) ? candidate : current;
+}
+
+export function riskRank(value: RiskLevel): number {
+  return ['low', 'medium', 'high', 'critical'].indexOf(value);
+}
+
+export function deltaRequiresRefreeze(delta: DeltaRecord, sprintRiskLevel: RiskLevel | null): boolean {
+  if (delta.recommended_next_mode === 'discovery') return true;
+  if (delta.scope_impact === 'major') return true;
+  if (delta.architecture_impact === 'major') return true;
+  if (sprintRiskLevel && riskRank(delta.risk_impact) > riskRank(sprintRiskLevel)) return true;
+  return false;
+}
+
+export function deltasSinceLatestFreeze(state: WorkflowStateV1): DeltaRecord[] {
+  if (!state.active_sprint_frozen_at) return state.deltas_since_last_sprint;
+  return state.deltas_since_last_sprint.filter(delta => delta.timestamp > state.active_sprint_frozen_at!);
+}
+
+export function evaluateReadiness(state: WorkflowStateV1): ReadinessEvaluation {
+  const blockers: string[] = [];
+  if (!state.active_sprint_brief) {
+    blockers.push('No active sprint brief has been frozen for this branch.');
+  }
+
+  const deltasAfterFreeze = deltasSinceLatestFreeze(state);
+  const requiresRefreeze = state.active_sprint_brief
+    ? deltasAfterFreeze.some(delta => deltaRequiresRefreeze(delta, state.active_sprint_brief?.risk_level ?? null))
+    : false;
+  if (requiresRefreeze) {
+    blockers.push('Post-freeze learning requires `/kstack sprint-freeze` before review or ship.');
+  }
+
+  const openBlockerFindings = state.findings.filter(finding =>
+    finding.status === 'open' && (finding.severity === 'high' || finding.severity === 'critical'),
+  );
+  if (openBlockerFindings.length > 0) {
+    blockers.push(`Open high-severity findings remain: ${openBlockerFindings.length}.`);
+  }
+
+  const missingTests = state.tests_required.filter(testName => !state.tests_satisfied.includes(testName));
+  if (missingTests.length > 0) {
+    blockers.push(`Required tests remain unsatisfied: ${missingTests.join(', ')}.`);
+  }
+
+  if (state.docs_to_regenerate.length > 0) {
+    blockers.push(`Documentation obligations remain: ${state.docs_to_regenerate.join(', ')}.`);
+  }
+
+  const hasAssuranceEvidence =
+    state.tests_satisfied.length > 0 ||
+    state.findings.length > 0 ||
+    Object.keys(state.lens_assessments).length > 0;
+
+  if (blockers.length > 0) {
+    return {
+      status: 'blocked',
+      blockers,
+      requires_refreeze: requiresRefreeze,
+      has_assurance_evidence: hasAssuranceEvidence,
+      summary: blockers.join(' '),
+    };
+  }
+
+  const openFindings = state.findings.filter(finding => finding.status === 'open');
+  if (!hasAssuranceEvidence) {
+    return {
+      status: 'draft',
+      blockers: [],
+      requires_refreeze: false,
+      has_assurance_evidence: false,
+      summary: 'A sprint exists, but assurance evidence has not been recorded yet.',
+    };
+  }
+
+  if (openFindings.length > 0) {
+    return {
+      status: 'ready-for-review',
+      blockers: [],
+      requires_refreeze: false,
+      has_assurance_evidence: true,
+      summary: 'The branch is coherent and reviewable, but non-blocking findings remain open.',
+    };
+  }
+
+  return {
+    status: 'ready-to-ship',
+    blockers: [],
+    requires_refreeze: false,
+    has_assurance_evidence: true,
+    summary: 'The branch contract is current and no semantic blockers remain.',
+  };
+}
+
+function summarizeOpenFindingsBySeverity(findings: FindingRecord[]): Record<RiskLevel, number> {
+  return findings.reduce<Record<RiskLevel, number>>((acc, finding) => {
+    if (finding.status === 'open') {
+      acc[finding.severity] += 1;
+    }
+    return acc;
+  }, {
+    low: 0,
+    medium: 0,
+    high: 0,
+    critical: 0,
+  });
+}
+
+export function buildBranchContract(
+  state: WorkflowStateV1,
+  paths: WorkflowPaths = resolveWorkflowPaths(),
+): BranchContractV1 {
+  const readiness = evaluateReadiness(state);
+  const sprintRisk = state.active_sprint_brief?.risk_level ?? null;
+  const deltasAfterFreeze = deltasSinceLatestFreeze(state).map(delta => ({
+    timestamp: delta.timestamp,
+    scope_impact: delta.scope_impact,
+    architecture_impact: delta.architecture_impact,
+    risk_impact: delta.risk_impact,
+    recommended_next_mode: delta.recommended_next_mode,
+    what_changed: delta.what_changed,
+    what_was_learned: delta.what_was_learned,
+    assumption_changed: delta.assumption_changed,
+    requires_refreeze: deltaRequiresRefreeze(delta, sprintRisk),
+  }));
+  const latestDelta = deltasAfterFreeze[deltasAfterFreeze.length - 1] || null;
+  const missingTests = state.tests_required.filter(testName => !state.tests_satisfied.includes(testName));
+  const openFindingCounts = summarizeOpenFindingsBySeverity(state.findings);
+
+  return {
+    schema_version: BRANCH_CONTRACT_SCHEMA_VERSION,
+    workflow_schema_version: WORKFLOW_SCHEMA_VERSION,
+    branch: paths.branch,
+    normalized_branch: paths.normalizedBranch,
+    generated_at: now(),
+    state_file: paths.stateFile,
+    intent: {
+      present: state.intent_record !== null,
+      raw_request: state.intent_record?.raw_request ?? null,
+      goals: state.intent_record?.goals ?? [],
+      non_goals: state.intent_record?.non_goals ?? [],
+      constraints: state.intent_record?.constraints ?? [],
+      candidate_wedges: state.intent_record?.candidate_wedges ?? [],
+      open_questions: state.intent_record?.open_questions ?? [],
+    },
+    sprint: {
+      present: state.active_sprint_brief !== null,
+      revision: state.active_sprint_revision,
+      frozen_at: state.active_sprint_frozen_at,
+      problem_statement: state.active_sprint_brief?.problem_statement ?? null,
+      in_scope_behavior: state.active_sprint_brief?.in_scope_behavior ?? [],
+      out_of_scope_behavior: state.active_sprint_brief?.out_of_scope_behavior ?? [],
+      acceptance_checks: state.active_sprint_brief?.acceptance_checks ?? [],
+      touched_surfaces: state.active_sprint_brief?.touched_surfaces ?? [],
+      tolerated_unresolved_questions: state.active_sprint_brief?.tolerated_unresolved_questions ?? [],
+      escalation_triggers: state.active_sprint_brief?.escalation_triggers ?? [],
+      risk_level: state.active_sprint_brief?.risk_level ?? null,
+    },
+    routing: state.routing,
+    risk_level: state.risk_level,
+    tests: {
+      required: state.tests_required,
+      satisfied: state.tests_satisfied,
+      missing: missingTests,
+    },
+    docs: {
+      queued: state.docs_to_regenerate,
+    },
+    findings: {
+      total: state.findings.length,
+      open: state.findings.filter(finding => finding.status === 'open').length,
+      blockers: openFindingCounts.high + openFindingCounts.critical,
+      open_by_severity: openFindingCounts,
+      items: state.findings.map(finding => ({
+        id: finding.id,
+        source: finding.source,
+        location: finding.location,
+        kind: finding.kind,
+        severity: finding.severity,
+        status: finding.status,
+      })),
+    },
+    deltas_since_freeze: {
+      count: deltasAfterFreeze.length,
+      latest_timestamp: latestDelta?.timestamp ?? null,
+      requires_refreeze: readiness.requires_refreeze,
+      items: deltasAfterFreeze,
+    },
+    readiness,
+    pr: {
+      recommendation: readiness.status,
+    },
+  };
+}
+
+export function renderBranchContractMarkdown(contract: BranchContractV1): string {
+  const lines = [
+    `# Branch Contract: ${contract.branch}`,
+    '',
+    `- Status: \`${contract.readiness.status}\``,
+    `- Routing: \`${contract.routing.mode}\` (\`${contract.routing.change_type}\`)`,
+    `- Risk: \`${contract.risk_level}\``,
+    `- Sprint revision: \`${contract.sprint.revision}\``,
+    `- Generated: \`${contract.generated_at}\``,
+    '',
+    '## Problem Statement',
+    contract.sprint.problem_statement || 'No sprint has been frozen yet.',
+    '',
+    '## In Scope',
+    ...(contract.sprint.in_scope_behavior.length > 0 ? contract.sprint.in_scope_behavior.map(item => `- ${item}`) : ['- None recorded']),
+    '',
+    '## Out of Scope',
+    ...(contract.sprint.out_of_scope_behavior.length > 0 ? contract.sprint.out_of_scope_behavior.map(item => `- ${item}`) : ['- None recorded']),
+    '',
+    '## Acceptance Checks',
+    ...(contract.sprint.acceptance_checks.length > 0 ? contract.sprint.acceptance_checks.map(item => `- ${item}`) : ['- None recorded']),
+    '',
+    '## Touched Surfaces',
+    ...(contract.sprint.touched_surfaces.length > 0 ? contract.sprint.touched_surfaces.map(item => `- ${item}`) : ['- None recorded']),
+    '',
+    '## Tests',
+    `- Required: ${contract.tests.required.length}`,
+    `- Satisfied: ${contract.tests.satisfied.length}`,
+    ...(contract.tests.missing.length > 0 ? contract.tests.missing.map(item => `- Missing: ${item}`) : ['- Missing: none']),
+    '',
+    '## Docs Obligations',
+    ...(contract.docs.queued.length > 0 ? contract.docs.queued.map(item => `- ${item}`) : ['- None']),
+    '',
+    '## Findings',
+    `- Total: ${contract.findings.total}`,
+    `- Open: ${contract.findings.open}`,
+    `- Blockers: ${contract.findings.blockers}`,
+    `- Open by severity: low=${contract.findings.open_by_severity.low}, medium=${contract.findings.open_by_severity.medium}, high=${contract.findings.open_by_severity.high}, critical=${contract.findings.open_by_severity.critical}`,
+    '',
+    '## Deltas Since Latest Freeze',
+    `- Count: ${contract.deltas_since_freeze.count}`,
+    `- Requires re-freeze: ${contract.deltas_since_freeze.requires_refreeze ? 'yes' : 'no'}`,
+    ...(contract.deltas_since_freeze.items.length > 0
+      ? contract.deltas_since_freeze.items.map(item => `- ${item.timestamp}: scope=${item.scope_impact}, architecture=${item.architecture_impact}, risk=${item.risk_impact}, next=${item.recommended_next_mode}`)
+      : ['- None']),
+    '',
+    '## Readiness',
+    `- Recommendation: \`${contract.pr.recommendation}\``,
+    `- Summary: ${contract.readiness.summary}`,
+    ...(contract.readiness.blockers.length > 0 ? contract.readiness.blockers.map(item => `- Blocker: ${item}`) : ['- Blocker: none']),
+  ];
+
+  return `${lines.join('\n')}\n`;
+}
+
+export function renderPullRequestBody(contract: BranchContractV1): string {
+  const lines = [
+    '## Branch Contract',
+    '',
+    `**Status:** \`${contract.readiness.status}\``,
+    `**Risk:** \`${contract.risk_level}\``,
+    `**PR Recommendation:** \`${contract.pr.recommendation}\``,
+    '',
+    '### Problem Statement',
+    contract.sprint.problem_statement || 'No sprint brief has been frozen yet.',
+    '',
+    '### In Scope',
+    ...(contract.sprint.in_scope_behavior.length > 0 ? contract.sprint.in_scope_behavior.map(item => `- ${item}`) : ['- None recorded']),
+    '',
+    '### Out of Scope',
+    ...(contract.sprint.out_of_scope_behavior.length > 0 ? contract.sprint.out_of_scope_behavior.map(item => `- ${item}`) : ['- None recorded']),
+    '',
+    '### Acceptance Checks',
+    ...(contract.sprint.acceptance_checks.length > 0 ? contract.sprint.acceptance_checks.map(item => `- ${item}`) : ['- None recorded']),
+    '',
+    '### Touched Surfaces',
+    ...(contract.sprint.touched_surfaces.length > 0 ? contract.sprint.touched_surfaces.map(item => `- ${item}`) : ['- None recorded']),
+    '',
+    '### Open Questions',
+    ...(contract.intent.open_questions.length > 0 ? contract.intent.open_questions.map(item => `- ${item}`) : ['- None']),
+    '',
+    '### Deltas Since Latest Freeze',
+    ...(contract.deltas_since_freeze.items.length > 0
+      ? contract.deltas_since_freeze.items.map(item => `- ${item.timestamp}: ${item.what_was_learned.join('; ') || 'Updated understanding.'}`)
+      : ['- None']),
+    '',
+    '### Findings and Blockers',
+    `- Open findings: ${contract.findings.open}`,
+    `- Blocking findings: ${contract.findings.blockers}`,
+    ...(contract.readiness.blockers.length > 0 ? contract.readiness.blockers.map(item => `- ${item}`) : ['- No semantic blockers recorded']),
+    '',
+    '### Readiness',
+    `- ${contract.readiness.summary}`,
+  ];
+
+  return `${lines.join('\n')}\n`;
+}
+
+function readJsonIfExists<T>(filePath: string): T | null {
+  try {
+    return JSON.parse(fs.readFileSync(filePath, 'utf-8')) as T;
+  } catch {
+    return null;
+  }
+}
+
+export function readBranchContract(paths: WorkflowPaths = resolveWorkflowPaths()): BranchContractV1 | null {
+  return readJsonIfExists<BranchContractV1>(paths.contractJsonFile);
+}
+
+export function writeBranchContract(
+  contract: BranchContractV1,
+  paths: WorkflowPaths = resolveWorkflowPaths(),
+): void {
+  ensureWorkflowDirs(paths);
+  fs.writeFileSync(paths.contractJsonFile, `${JSON.stringify(contract, null, 2)}\n`, 'utf-8');
+  fs.writeFileSync(paths.contractMarkdownFile, renderBranchContractMarkdown(contract), 'utf-8');
+}
+
+export function exportBranchContract(
+  state: WorkflowStateV1,
+  paths: WorkflowPaths = resolveWorkflowPaths(),
+): BranchContractV1 {
+  const contract = buildBranchContract(state, paths);
+  writeBranchContract(contract, paths);
+  return contract;
 }
 
 export function inferRoutingFromFiles(changedFiles: string[]): RoutingDecision {
@@ -802,17 +1228,21 @@ export function detectBaseBranch(repoRoot: string = getRepoRoot()): string {
 }
 
 export function buildHumanSummary(state: WorkflowStateV1, paths: WorkflowPaths = resolveWorkflowPaths()): string {
+  const readiness = evaluateReadiness(state);
   const lines = [
     `State: ${paths.stateFile}`,
+    `Contract: ${paths.contractJsonFile}`,
     `Schema: ${state.schema_version}`,
     `Routing: ${state.routing.mode} (${state.routing.change_type})`,
     `Risk: ${state.risk_level}`,
     `Escalation: ${state.escalation_status}`,
     `Intent: ${state.intent_record ? 'present' : 'missing'}`,
     `Sprint brief: ${state.active_sprint_brief ? 'present' : 'missing'}`,
+    `Sprint revision: ${state.active_sprint_revision}`,
     `Findings: ${state.findings.length}`,
     `Tests: ${state.tests_satisfied.length}/${state.tests_required.length} satisfied`,
     `Docs queued: ${state.docs_to_regenerate.length}`,
+    `Readiness: ${readiness.status}`,
   ];
 
   if (state.provenance.migrated_from.length > 0) {

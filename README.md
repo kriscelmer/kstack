@@ -35,6 +35,22 @@ Most AI coding workflows drift because intent is stored in chat, planning is sto
 
 For the deeper rationale, read [docs/kstack-concept.md](/Users/krzysztofcelmer/Documents/codex/kstack/docs/kstack-concept.md).
 
+## Git, GitHub, and KStack
+
+KStack is meant to sit between Git and GitHub, not replace either of them.
+
+- **Git** is the source of code truth.
+- **GitHub** is the source of collaboration and enforcement.
+- **KStack** is the source of workflow truth for the current branch.
+
+That means:
+
+- Git owns the branch, commits, diff, and merge history.
+- GitHub owns the PR, reviews, Actions, and required checks.
+- KStack owns the semantic execution contract for that branch.
+
+The full model is documented in [docs/git-github-integration.md](/Users/krzysztofcelmer/Documents/codex/kstack/docs/git-github-integration.md).
+
 ## Public Command Surface
 
 `kstack` now exposes one public skill entrypoint:
@@ -73,18 +89,20 @@ The normal loop is:
 1. `/kstack init`
 2. `/kstack discover`
 3. `/kstack sprint-freeze`
-4. `/kstack implement`
-5. `/kstack review`, `/kstack qa`, `/kstack cso`, `/kstack document-release`
-6. `/kstack ingest-learning` when new facts change the original assumptions
-7. `/kstack sprint-freeze` again if the sprint contract moved
-8. `/kstack ship`
+4. export the branch contract with `bin/kstack-state export-contract` and generate the PR body with `bin/kstack-state export-pr`
+5. `/kstack implement`
+6. `/kstack review`, `/kstack qa`, `/kstack cso`, `/kstack document-release`
+7. `/kstack ingest-learning` when new facts change the original assumptions
+8. `/kstack sprint-freeze` again if the sprint contract moved
+9. `/kstack ship`
 
 Truth precedence:
 
 1. `code`, `tests`, and config
 2. `.kstack/state/<branch>.json`
-3. `.kstack/reports/`
-4. conversation context
+3. `.kstack/contracts/<branch>.json`
+4. `.kstack/reports/`
+5. conversation context
 
 ## Primary Subcommands
 
@@ -170,10 +188,11 @@ Example: you create a new repo for an onboarding idea, add it to Codex App, and 
 3. Run `/kstack discover` to capture the real pain, examples, goals, non-goals, and candidate wedge.
 4. Run `/kstack sprint-freeze` to turn that into a bounded execution contract.
 5. Run `/kstack implement` to code against the frozen sprint.
-6. Run `/kstack review` and `/kstack qa`.
-7. If QA reveals that the original assumptions were wrong, run `/kstack ingest-learning`.
-8. If the delta materially changes scope, refresh `/kstack sprint-freeze`.
-9. Only then continue implementation or ship with `/kstack ship`.
+6. Export the branch contract with `bin/kstack-state export-contract`, generate the PR body with `bin/kstack-state export-pr`, and open a Draft PR.
+7. Run `/kstack review` and `/kstack qa`.
+8. If QA reveals that the original assumptions were wrong, run `/kstack ingest-learning`.
+9. If the delta materially changes scope, refresh `/kstack sprint-freeze`.
+10. Only then continue implementation or ship with `/kstack ship`.
 
 That intent-update cycle is a first-class part of the model, not an exception.
 
@@ -182,6 +201,7 @@ For a detailed end-to-end scenario, including multiple intent update cycles, rea
 ## Runtime Layout
 
 - Repo-local workflow state: `.kstack/state/`
+- Repo-local tracked branch contracts: `.kstack/contracts/`
 - Repo-local report projections: `.kstack/reports/`
 - User-global config and install metadata: `~/.kstack/`
 - Installed Codex runtime root: `~/.codex/skills/kstack`
@@ -204,5 +224,6 @@ Templates live in `*/SKILL.md.tmpl`. Generated outputs should never be edited di
 - [docs/installation-guide.md](/Users/krzysztofcelmer/Documents/codex/kstack/docs/installation-guide.md)
 - [docs/typical-workflow.md](/Users/krzysztofcelmer/Documents/codex/kstack/docs/typical-workflow.md)
 - [docs/kstack-concept.md](/Users/krzysztofcelmer/Documents/codex/kstack/docs/kstack-concept.md)
+- [docs/git-github-integration.md](/Users/krzysztofcelmer/Documents/codex/kstack/docs/git-github-integration.md)
 - [docs/skills.md](/Users/krzysztofcelmer/Documents/codex/kstack/docs/skills.md)
 - [docs/migration-to-kstack.md](/Users/krzysztofcelmer/Documents/codex/kstack/docs/migration-to-kstack.md)

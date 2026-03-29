@@ -12,6 +12,7 @@
 
 import * as fs from 'fs';
 import * as path from 'path';
+import { upsertKstackGitignore } from '../../lib/kstack-gitignore';
 
 export interface BrowseConfig {
   projectDir: string;
@@ -93,11 +94,8 @@ export function ensureStateDir(config: BrowseConfig): void {
   // Ensure .kstack/ is in the project's .gitignore
   const gitignorePath = path.join(config.projectDir, '.gitignore');
   try {
-    const content = fs.readFileSync(gitignorePath, 'utf-8');
-    if (!content.match(/^\.kstack\/?$/m)) {
-      const separator = content.endsWith('\n') ? '' : '\n';
-      fs.appendFileSync(gitignorePath, `${separator}.kstack/\n`);
-    }
+    void gitignorePath;
+    upsertKstackGitignore(config.projectDir);
   } catch (err: any) {
     if (err.code !== 'ENOENT') {
       // Write warning to server log (visible even in daemon mode)

@@ -15,3 +15,4 @@ description: |
 2. If the change is security-sensitive, attach a `security` lens assessment with `$KSTACK_STATE add-lens security <json-file>`.
 3. Record vulnerabilities, trust-boundary violations, secret leaks, or unsafe defaults as `FindingRecord`s with `source: "cso"`.
 4. Escalate with `$KSTACK_STATE set-escalation needs-human` when you cannot verify a security-sensitive behavior confidently.
+5. Refresh the projected branch contract with `$KSTACK_STATE export-contract`.

@@ -79,6 +79,26 @@ It should become a `DeltaRecord` that answers:
 
 This is why `kstack` is not just a planning tool. It is a workflow adaptation system.
 
+## Git, GitHub, and KStack
+
+KStack is not trying to replace source control or forge collaboration.
+
+The intended split is:
+
+- Git stores the code change.
+- GitHub stores the collaboration and enforcement around that change.
+- KStack stores the semantic execution contract for the branch.
+
+That lets KStack stay narrow and useful.
+
+It does not need to become:
+
+- a second Git
+- a parallel issue tracker
+- a replacement PR system
+
+It only needs to make the branch’s meaning explicit and inspectable.
+
 ## Why Branch-Local State
 
 The state is branch-local because branches are already the natural unit of engineering intent.
@@ -98,6 +118,13 @@ Branch-local state makes it easier to:
 - compare intent against code
 - preserve isolation between experiments
 - ship or abandon work cleanly
+
+The preferred branch model is trunk-based with short-lived branches:
+
+- `main` stays releasable
+- feature branches stay focused
+- one branch carries one active intent and one active sprint
+- if the work splits, create another branch
 
 ## Why Thin Skills
 
@@ -164,6 +191,15 @@ Routing should follow explicit heuristics and recorded reasoning, not role-play 
 ### Repo-local beats tool-local
 
 If the workflow matters to the codebase, the state should live with the codebase.
+
+### Projection beats duplication
+
+Raw operational state and durable review state are not the same thing.
+
+That is why KStack now uses a hybrid model:
+
+- raw `.kstack/state` remains local operational memory
+- tracked `.kstack/contracts` becomes the durable branch contract used for Git history, pull requests, and semantic readiness checks
 
 ## What KStack Is Not
 

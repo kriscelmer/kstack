@@ -6,6 +6,7 @@
 - Codex is the only supported host.
 - The old planning ceremony was replaced by canonical repo-local workflow state.
 - The public command surface was collapsed into one routed skill, `/kstack`.
+- Branch contract projections now live under `.kstack/contracts/`.
 - Public binaries now use `kstack-*` and `KSTACK_*`.
 - `gstack-*` binaries remain as compatibility wrappers only.
 - `/codex` was removed.
@@ -34,6 +35,7 @@ Bare `/kstack` behaves like help and explains the supported routed subcommands.
 - New writes go to `.kstack/` and `~/.kstack/`.
 - `lib/workflow-state.ts` can read legacy `.gstack/` and `~/.gstack/` locations as fallback inputs when no `.kstack` state exists yet.
 - New workflow truth should never be written back to `.gstack/`.
+- Raw `.kstack/state/` remains local operational memory, while `.kstack/contracts/` is the tracked projection layer for Git and GitHub.
 
 ## Intentionally Deferred
 

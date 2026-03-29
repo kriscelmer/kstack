@@ -19,7 +19,9 @@ describe('browse config', () => {
     const config = resolveConfig({ BROWSE_STATE_FILE: path.join(projectDir, '.kstack', 'browse.json') });
     ensureStateDir(config);
     expect(fs.existsSync(config.stateDir)).toBe(true);
-    expect(fs.readFileSync(path.join(projectDir, '.gitignore'), 'utf-8')).toContain('.kstack/');
+    const gitignore = fs.readFileSync(path.join(projectDir, '.gitignore'), 'utf-8');
+    expect(gitignore).toContain('.kstack/*');
+    expect(gitignore).toContain('!.kstack/contracts/');
   });
 
   test('reads version hashes from adjacent .version files', () => {

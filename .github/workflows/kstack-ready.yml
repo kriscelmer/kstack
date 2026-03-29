@@ -1,0 +1,53 @@
+name: kstack-ready
+on:
+  pull_request:
+    branches: [main]
+
+jobs:
+  readiness:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: oven-sh/setup-bun@v2
+
+      - name: Install dependencies
+        run: bun install
+
+      - name: Resolve projected contract
+        env:
+          BRANCH_NAME: ${{ github.head_ref }}
+        run: |
+          set -euo pipefail
+          NORMALIZED_BRANCH=$(bun -e 'const branch = process.argv[1] || ""; const normalized = branch.replace(/^refs\/heads\//, "").replace(/[^\w.-]+/g, "-").replace(/-+/g, "-").replace(/^-|-$/g, ""); console.log(!normalized || normalized === "HEAD" ? "detached-head" : normalized);' "$BRANCH_NAME")
+          CONTRACT_PATH=".kstack/contracts/${NORMALIZED_BRANCH}.json"
+          if [ ! -f "$CONTRACT_PATH" ]; then
+            echo "Missing projected branch contract: $CONTRACT_PATH" >> "$GITHUB_STEP_SUMMARY"
+            exit 1
+          fi
+          echo "CONTRACT_PATH=$CONTRACT_PATH" >> "$GITHUB_ENV"
+
+      - name: Evaluate semantic readiness
+        env:
+          BRANCH_NAME: ${{ github.head_ref }}
+        run: |
+          set -euo pipefail
+          bun run bin/kstack-state.ts ready --json --branch "$BRANCH_NAME" > /tmp/kstack-ready.json
+          STATUS=$(jq -r '.status' /tmp/kstack-ready.json)
+          SUMMARY=$(jq -r '.summary' /tmp/kstack-ready.json)
+
+          {
+            echo "## KStack Readiness"
+            echo
+            echo "- Status: \`$STATUS\`"
+            echo "- Summary: $SUMMARY"
+            echo
+            echo "### Blockers"
+            jq -r '.blockers[]? | "- " + .' /tmp/kstack-ready.json
+          } >> "$GITHUB_STEP_SUMMARY"
+
+          if [ "$STATUS" = "blocked" ]; then
+            exit 1
+          fi

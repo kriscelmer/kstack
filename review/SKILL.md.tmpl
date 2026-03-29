@@ -22,4 +22,5 @@ description: |
 2. Inspect the branch scope and route with `$KSTACK_STATE route --auto`.
 3. For each finding, write a JSON object that matches `{id, source, location, kind, severity, evidence, status, duplicate_of?, linked_sprint}` and append it with `$KSTACK_STATE upsert-finding <json-file>`.
 4. Mark satisfied checks with `$KSTACK_STATE satisfy-test "<check name>"` when the diff proves them.
-5. Summarize the review with findings first, then residual risk.
+5. Refresh the projected branch contract with `$KSTACK_STATE export-contract`.
+6. Summarize the review with findings first, then residual risk, and mention the current `$KSTACK_STATE ready` status.

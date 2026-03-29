@@ -213,6 +213,21 @@ If you previously used `gstack`:
 
 `kstack` setup also copies `~/.gstack/config.yaml` into `~/.kstack/config.yaml` if the new config file does not exist yet.
 
+## Recommended GitHub Settings
+
+For repositories that use KStack as the execution-contract layer:
+
+- protect `main`
+- merge through pull requests only
+- require approving reviews
+- require these checks:
+  - `Workflow Lint`
+  - `Skill Docs Freshness`
+  - `E2E Evals`
+  - `kstack-ready`
+
+KStack does not try to enforce those repository settings from inside the repo. They remain repository policy.
+
 ## Uninstall
 
 To remove the installed Codex runtime and global state:

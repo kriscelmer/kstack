@@ -34,6 +34,14 @@ Run `/kstack` or `/kstack help` when you need to discover the available operatio
 
 Routed commands are meant to be short and neutral because the workflow is state-native. The subcommand name should describe the transition or operation being performed, not a persona.
 
+The branch contract and PR body are generated through the state CLI, not through a separate public skill:
+
+```bash
+bin/kstack-state export-contract
+bin/kstack-state export-pr
+bin/kstack-state ready
+```
+
 ## Legacy Wrappers
 
 | Command | Maps To |
@@ -50,8 +58,9 @@ Routed commands are meant to be short and neutral because the workflow is state-
 2. `/kstack init`
 3. `/kstack discover`
 4. `/kstack sprint-freeze`
-5. `/kstack implement`
-6. `/kstack review` and `/kstack qa`
-7. `/kstack ingest-learning` when assumptions or scope move
-8. `/kstack document-release`
-9. `/kstack ship`
+5. export the branch contract and open a Draft PR
+6. `/kstack implement`
+7. `/kstack review` and `/kstack qa`
+8. `/kstack ingest-learning` when assumptions or scope move
+9. `/kstack document-release`
+10. `/kstack ship`
