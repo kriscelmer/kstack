@@ -1,6 +1,6 @@
 # Contributing
 
-## Local Workflow
+## Development Setup
 
 ```bash
 bun install
@@ -8,7 +8,19 @@ bun run build
 bun test
 ```
 
-`kstack` is Codex-only. The build regenerates `SKILL.md` files, compiles the browse CLI, compiles `kstack-state`, and refreshes the `.agents/skills/kstack` runtime root.
+If `bun` is installed outside your shell PATH, use:
+
+```bash
+BUN_BIN="${BUN_BIN:-$HOME/.bun/bin/bun}" "$BUN_BIN" run build
+BUN_BIN="${BUN_BIN:-$HOME/.bun/bin/bun}" "$BUN_BIN" test
+```
+
+`kstack` is Codex-only. The build:
+
+- regenerates all `SKILL.md` files
+- refreshes `.agents/skills/kstack`
+- compiles the browse CLI
+- compiles `kstack-state`
 
 ## Repository Rules
 
@@ -16,6 +28,20 @@ bun test
 - Keep workflow truth in `.kstack/state/`, not ad hoc plan files.
 - Prefer `kstack-*` binaries and `KSTACK_*` environment variables in new code.
 - Leave `gstack-*` wrappers only for migration compatibility.
+- If intent changes mid-implementation, reflect that in docs and state-oriented code paths instead of encoding assumptions in chat-only prose.
+
+## What To Update When Behavior Changes
+
+Any public behavior change should update:
+
+- `README.md`
+- `AGENTS.md`
+- `ARCHITECTURE.md`
+- `docs/skills.md`
+- `docs/installation-guide.md`
+- `docs/typical-workflow.md` when the workflow loop changed
+- `docs/kstack-concept.md` when the design philosophy changed
+- `docs/migration-to-kstack.md` when migration semantics changed
 
 ## Testing Focus
 
@@ -28,12 +54,37 @@ The test suite covers:
 - utility binaries and compatibility wrappers
 - browse path resolution under `.kstack/`
 
-## Release Docs
+Run:
 
-Any public behavior change should update:
+```bash
+bun test
+bun run skill:check
+```
 
-- `README.md`
-- `AGENTS.md`
-- `ARCHITECTURE.md`
-- `docs/skills.md`
-- `docs/migration-to-kstack.md` when migration semantics changed
+before shipping doc or workflow changes.
+
+## Working On Skills
+
+The important workflow pattern is:
+
+1. template describes the skill behavior
+2. generator produces in-repo `SKILL.md`
+3. generator produces `.agents/skills/<skill>/SKILL.md`
+4. Codex setup exposes those generated skills under `~/.codex/skills/`
+
+Do not hand-edit generated skill output.
+
+## Working On Workflow State
+
+If you change:
+
+- `WorkflowStateV1`
+- routing heuristics
+- intent, sprint, delta, or finding semantics
+- setup paths
+
+you should update:
+
+- docs
+- tests
+- any shell-facing `kstack-*` utility that reads or writes state

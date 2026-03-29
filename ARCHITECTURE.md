@@ -1,12 +1,12 @@
 # Architecture
 
-## Core Model
+## System Model
 
 `kstack` is built around one canonical repo-local state file per branch:
 
 - `.kstack/state/<normalized-branch>.json`
 
-That file carries:
+That file is versioned through `WorkflowStateV1` and currently carries:
 
 - `intent_record`
 - `active_sprint_brief`
@@ -24,11 +24,111 @@ That file carries:
 - `escalation_status`
 - `provenance`
 
-## Why This Replaced The Old Plan Stack
+## The Problem It Solves
 
-The original `gstack` workflow spread planning state across review transcripts, docs, JSONL logs, and host-specific side effects. That made the workflow hard to inspect, hard to update after new learnings, and hard to automate across branches.
+Traditional AI-assisted coding workflows scatter planning truth across:
 
-`kstack` collapses that into one branch-local source of truth. Skills become thin views over shared state instead of separate plan systems.
+- chat transcripts
+- design docs
+- review logs
+- QA notes
+- shell output
+- unstated human memory
+
+That makes the workflow hard to inspect and easy to drift. A reviewer can be reasoning from a stale plan while the implementation has already moved on.
+
+`kstack` treats workflow state as a first-class artifact inside the repo. Discovery, execution, QA, security, and release work all write into the same branch-local object.
+
+## Discovery, Freeze, Delta
+
+The architecture is intentionally centered on three workflow phases:
+
+### 1. Discovery
+
+Discovery produces an `IntentRecord`.
+
+Its job is to answer:
+
+- what the user actually wants
+- what pain or examples matter
+- what goals and non-goals exist
+- what constraints are real
+- what wedge is worth attempting first
+- what remains unresolved
+
+### 2. Sprint Freeze
+
+Sprint freeze produces the active `SprintBrief`.
+
+Its job is to answer:
+
+- what problem is being solved in this sprint
+- what behavior is explicitly in scope
+- what behavior is explicitly out of scope
+- what acceptance checks define “done”
+- what surfaces are expected to change
+- what unresolved questions are tolerated
+- what should trigger escalation
+
+### 3. Delta Ingest
+
+Delta ingest produces `DeltaRecord`s.
+
+Its job is to answer:
+
+- what changed
+- what was learned
+- which assumptions moved
+- whether scope changed
+- whether architecture changed
+- whether risk changed
+- whether the correct next action is continued execution, re-freeze, or renewed discovery
+
+This matters because intent drift is normal. `kstack` makes it explicit rather than pretending the first plan survived contact with implementation.
+
+## Routing
+
+Routing is deterministic and state-backed.
+
+The current route answers which mode the branch is in:
+
+- `discovery`
+- `execution`
+- `docs`
+- `review`
+- `qa`
+- `security`
+
+It also records:
+
+- `change_type`
+- `required_lenses`
+- the reason for the route
+
+That allows old role-based review concepts to survive as lenses instead of independent plan stacks.
+
+## Normalized Findings
+
+`kstack` uses one normalized `FindingRecord` shape across review, QA, security, and release checks.
+
+That prevents duplicated issue systems such as:
+
+- review comments in one place
+- QA issues in another
+- release blockers in a third
+
+Instead, different skills become different producers of the same record type.
+
+## Truth Precedence
+
+The system is opinionated about truth:
+
+1. `code`, `tests`, and config define actual behavior.
+2. `.kstack/state` defines workflow intent and current execution contract.
+3. `.kstack/reports/` holds projections derived from state plus evidence.
+4. chat context is advisory only.
+
+If chat and state conflict, the answer is not “remember harder”. The answer is “update the state”.
 
 ## Runtime Layout
 
@@ -44,7 +144,9 @@ The browse architecture is intentionally preserved:
 
 - `browse/dist/browse` is the compiled CLI entrypoint.
 - `browse/src/server.ts` runs the persistent browser server.
-- Project-local browser state and logs now live under `.kstack/` instead of `.gstack/`.
+- project-local browser state and logs live under `.kstack/`
+
+The browser runtime is not the workflow brain. It is a verification runtime that feeds evidence back into canonical state.
 
 ## Skill Generation
 
@@ -54,4 +156,22 @@ Every `SKILL.md` file is generated from a `SKILL.md.tmpl` source. The generator 
 - `.agents/skills/<skill>/SKILL.md`
 - `.agents/skills/<skill>/agents/openai.yaml`
 
-The root runtime directory `.agents/skills/kstack/` also links shared runtime assets such as `bin/`, `browse/`, docs, and version files.
+The root runtime directory `.agents/skills/kstack/` also links shared runtime assets such as:
+
+- `bin/`
+- `browse/`
+- docs
+- version files
+
+## Installation Model
+
+`kstack` is Codex-only.
+
+The install model is:
+
+- source checkout in a repo
+- generated runtime under `.agents/skills/kstack`
+- installed runtime under `~/.codex/skills/kstack`
+- compatibility wrappers kept only where migration cost is low
+
+The repo no longer treats Claude, Gemini, or Kiro as equal host targets.

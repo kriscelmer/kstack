@@ -1,6 +1,14 @@
 # kstack — Codex Workflow Pack
 
-`kstack` is a Codex-first workflow system. Every skill uses the same canonical branch state at `.kstack/state/<normalized-branch>.json`.
+`kstack` is a Codex-first workflow system. Every skill reads or writes the same canonical branch state at `.kstack/state/<normalized-branch>.json`.
+
+## Operational Rules
+
+1. Treat `.kstack/state` as the workflow source of truth.
+2. If new information changes the original plan, update state with `/ingest-learning` instead of silently continuing.
+3. If the delta changes scope or acceptance criteria, refresh the sprint with `/sprint-freeze`.
+4. Review, QA, security, and release work should write normalized findings or satisfied checks back into state.
+5. Generated `SKILL.md` files are outputs. Edit `SKILL.md.tmpl` sources only.
 
 ## Primary Skills
 
@@ -27,6 +35,13 @@ These commands still exist for migration, but they write to the same canonical s
 - `/plan-design-review`
 - `/autoplan`
 
+## Truth Precedence
+
+1. `code`, `tests`, and config
+2. `.kstack/state/<branch>.json`
+3. `.kstack/reports/`
+4. conversation context
+
 ## Build Commands
 
 ```bash
@@ -43,3 +58,4 @@ bun run skill:check
 - `kstack-state` is the canonical state interface for shell-driven skills.
 - Repo-local truth lives under `.kstack/`. Global config lives under `~/.kstack/`.
 - `gstack-*` binaries are compatibility wrappers only. New code should use `kstack-*`.
+- If intent changes mid-sprint, do not just “keep going”. Capture the delta and re-freeze if needed.
