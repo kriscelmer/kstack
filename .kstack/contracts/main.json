@@ -3,7 +3,7 @@
   "workflow_schema_version": "workflow-state/v1",
   "branch": "main",
   "normalized_branch": "main",
-  "generated_at": "2026-03-30T12:00:00Z",
+  "generated_at": "2026-03-30T08:30:09.795Z",
   "state_file": ".kstack/state/main.json",
   "intent": {
     "present": true,

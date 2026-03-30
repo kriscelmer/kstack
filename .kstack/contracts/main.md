@@ -4,7 +4,7 @@
 - Routing: `execution` (`architecture`)
 - Risk: `medium`
 - Sprint revision: `1`
-- Generated: `2026-03-30T12:00:00Z`
+- Generated: `2026-03-30T08:30:09.795Z`
 
 ## Problem Statement
 KStack needs a clean self-hosted V1 baseline so further KStack work can happen entirely through KStack workflow and committed repo artifacts.

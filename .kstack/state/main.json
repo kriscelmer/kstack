@@ -85,7 +85,16 @@
   },
   "active_sprint_revision": 1,
   "active_sprint_frozen_at": "2026-03-30T12:00:00Z",
-  "lens_assessments": {},
+  "lens_assessments": {
+    "architecture": {
+      "lens": "architecture",
+      "summary": "Reviewed the current branch tip against origin/main and HEAD. No diff was present, so no review findings were recorded.",
+      "concerns": [],
+      "recommendations": [],
+      "risk_level": "low",
+      "updated_at": "2026-03-30T12:30:00Z"
+    }
+  },
   "accepted_decisions": [
     {
       "title": "Keep only main.json as raw tracked state on main",
@@ -147,13 +156,18 @@
   "escalation_status": "none",
   "provenance": {
     "created_at": "2026-03-30T12:00:00Z",
-    "updated_at": "2026-03-30T12:00:00Z",
+    "updated_at": "2026-03-30T08:30:09.795Z",
     "migrated_from": [],
     "sources": [
       {
         "source": "self-hosting.v1",
         "timestamp": "2026-03-30T12:00:00Z",
         "note": "Finalize the committed self-hosting baseline for KStack 1.0.0."
+      },
+      {
+        "source": "kstack-state.add-lens",
+        "timestamp": "2026-03-30T08:30:09.795Z",
+        "note": "architecture lens updated"
       }
     ]
   }
