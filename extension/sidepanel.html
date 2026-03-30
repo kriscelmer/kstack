@@ -14,31 +14,19 @@
     </div>
   </div>
 
-  <!-- Chat Tab (default, full height) -->
-  <main id="tab-chat" class="tab-content active">
-    <div class="chat-messages" id="chat-messages">
-      <div class="chat-loading" id="chat-loading">
-        <div class="chat-loading-spinner"></div>
-        <p>Connecting...</p>
-      </div>
-      <div class="chat-welcome" id="chat-welcome" style="display:none">
-        <div class="chat-welcome-icon">G</div>
-        <p>Send a message to Claude Code.</p>
-        <p class="muted">Your agent will see it and act on it.</p>
-      </div>
-    </div>
-  </main>
+  <nav class="tabs" id="tabs" role="tablist">
+    <button class="tab active" role="tab" data-tab="activity">Activity</button>
+    <button class="tab" role="tab" data-tab="refs">Refs</button>
+  </nav>
 
-  <!-- Debug: Activity Tab (hidden by default) -->
-  <main id="tab-activity" class="tab-content" role="log" aria-live="polite">
+  <main id="tab-activity" class="tab-content active" role="log" aria-live="polite">
     <div class="empty-state" id="empty-state">
       <p>Waiting for commands...</p>
-      <p class="muted">Run a browse command to see activity here.</p>
+      <p class="muted">Run browser-backed QA or browse commands to see activity here.</p>
     </div>
     <div id="activity-feed"></div>
   </main>
 
-  <!-- Debug: Refs Tab (hidden by default) -->
   <main id="tab-refs" class="tab-content">
     <div class="empty-state" id="refs-empty">
       <p>No refs yet</p>
@@ -48,22 +36,10 @@
     <div class="refs-footer" id="refs-footer"></div>
   </main>
 
-  <!-- Experimental chat banner (shown when chatEnabled) -->
-  <div id="experimental-banner" class="experimental-banner" style="display: none;">
-    &#x26A0; Standalone mode &mdash; this is a separate agent from your workspace
-  </div>
-
-  <!-- Command Bar -->
-  <div class="command-bar">
-    <input type="text" class="command-input" id="command-input" placeholder="Message Claude Code..." autocomplete="off" spellcheck="false">
-    <button class="send-btn" id="send-btn" title="Send">&#x2191;</button>
-  </div>
-
-  <!-- Footer with connection + debug toggle -->
+  <!-- Footer with connection tools -->
   <footer>
     <div class="footer-left">
-      <button class="debug-toggle" id="debug-toggle" title="Toggle debug panels">debug</button>
-      <button class="footer-btn" id="clear-chat" title="Clear chat">clear</button>
+      <button class="footer-btn" id="refresh-refs" title="Refresh refs">refresh refs</button>
     </div>
     <div class="footer-right">
       <span class="dot" id="footer-dot"></span>
@@ -71,13 +47,6 @@
       <input type="text" class="port-input" id="port-input" placeholder="34567" autocomplete="off" style="display:none">
     </div>
   </footer>
-
-  <!-- Debug tab bar (hidden by default) -->
-  <nav class="tabs debug-tabs" id="debug-tabs" role="tablist" style="display:none">
-    <button class="tab" role="tab" data-tab="activity">Activity</button>
-    <button class="tab" role="tab" data-tab="refs">Refs</button>
-    <button class="tab close-debug" id="close-debug" title="Close debug">&times;</button>
-  </nav>
 
   <script src="sidepanel.js"></script>
 </body>

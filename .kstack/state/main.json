@@ -1,0 +1,160 @@
+{
+  "schema_version": "workflow-state/v1",
+  "intent_record": {
+    "raw_request": "Cut KStack 1.0.0 as a clean self-hosted KStack release.",
+    "user_pain_examples": [
+      "The KStack repository still depended on bootstrap-only state instead of a stable self-hosting baseline.",
+      "The public /kstack help still leaked browser-runtime commands that were not part of the supported routed workflow.",
+      "GitHub validation still targeted deleted or non-V1 surfaces, so the shipped repo and CI policy could drift."
+    ],
+    "goals": [
+      "Make the KStack repository self-hosting from committed repo state and committed main-branch contracts.",
+      "Keep the public workflow surface limited to /kstack and its supported routed subcommands.",
+      "Align CI, docs, install scripts, and release metadata with the actual shipped V1 product.",
+      "Leave main ready for further KStack-driven development without reintroducing bootstrap or compatibility scaffolding."
+    ],
+    "non_goals": [
+      "Adding new public routed commands beyond the supported /kstack surface.",
+      "Expanding V1 into npm publishing or non-Codex host support.",
+      "Taking on backlog items like richer readiness narration, contract diffs, or PR-sync helpers in this release."
+    ],
+    "constraints": [
+      "All persistent repo-facing text must remain in English.",
+      "main must keep only .kstack/state/main.json as raw tracked branch state.",
+      "Feature branches may carry raw branch state temporarily, but that raw state must not survive merge to main.",
+      "Durable .kstack/contracts artifacts remain the committed branch-history surface after merge.",
+      "Source-checkout installation remains the canonical distribution model for V1."
+    ],
+    "hypotheses": [
+      "A committed main state plus committed main contract is enough to make KStack maintainable through KStack itself.",
+      "If CI validates self-hosting invariants and contract freshness, main can remain a clean baseline while feature branches use branch-local KStack workflow.",
+      "Keeping browser capability as internal runtime infrastructure preserves QA power without muddying the public workflow surface."
+    ],
+    "candidate_wedges": [
+      "Enforce a deterministic main contract and self-hosting invariant check.",
+      "Strip browser command tables from root /kstack help while keeping advanced runtime docs in BROWSER.md.",
+      "Replace stale GitHub eval matrices with validation workflows that match the real repo."
+    ],
+    "open_questions": [],
+    "provenance": [
+      {
+        "source": "self-hosting.v1",
+        "timestamp": "2026-03-30T12:00:00Z",
+        "note": "Finalize the committed self-hosting baseline for KStack 1.0.0."
+      }
+    ]
+  },
+  "active_sprint_brief": {
+    "problem_statement": "KStack needs a clean self-hosted V1 baseline so further KStack work can happen entirely through KStack workflow and committed repo artifacts.",
+    "in_scope_behavior": [
+      "Commit and validate main branch state plus committed main branch contract artifacts.",
+      "Keep /kstack help limited to the supported routed workflow surface.",
+      "Align CI and release metadata with the actual V1 repo surface.",
+      "Make setup and uninstall safe for a self-hosting repository that tracks its own state."
+    ],
+    "out_of_scope_behavior": [
+      "Adding new routed workflow commands or reviving removed legacy surfaces.",
+      "Implementing post-V1 backlog items such as contract diffs, PR-body sync helpers, or browser ergonomics enhancements.",
+      "Expanding KStack beyond its Codex-first source-checkout distribution model."
+    ],
+    "acceptance_checks": [
+      ".kstack/state/main.json exists, validates, and reflects the V1 self-hosting baseline.",
+      ".kstack/contracts/main.json and .md exist, are deterministic, and stay fresh against main state.",
+      "Root /kstack help exposes only the supported routed workflow and not browser command tables.",
+      "GitHub validation references only shipped V1 surfaces and current tests.",
+      "Setup and uninstall remain safe for a repository that tracks its own workflow state.",
+      "VERSION and package metadata are aligned on 1.0.0."
+    ],
+    "touched_surfaces": [
+      ".kstack/",
+      ".github/workflows/",
+      "SKILL.md.tmpl",
+      "bin/",
+      "docs/",
+      "lib/",
+      "scripts/",
+      "test/"
+    ],
+    "tolerated_unresolved_questions": [],
+    "escalation_triggers": [
+      "Main contract freshness cannot be checked deterministically from committed state.",
+      "The repo needs to keep raw feature-branch state on main after merge.",
+      "The public /kstack surface cannot be cleaned without breaking supported QA workflow."
+    ],
+    "risk_level": "medium"
+  },
+  "active_sprint_revision": 1,
+  "active_sprint_frozen_at": "2026-03-30T12:00:00Z",
+  "lens_assessments": {},
+  "accepted_decisions": [
+    {
+      "title": "Keep only main.json as raw tracked state on main",
+      "rationale": "Feature branches may use raw branch state while active, but main stays clean and self-hosting by keeping only the canonical main baseline.",
+      "source": "self-hosting.v1",
+      "timestamp": "2026-03-30T12:00:00Z"
+    },
+    {
+      "title": "Commit durable branch contracts as the historical record",
+      "rationale": "Contracts preserve branch meaning in Git history after raw feature-branch state is removed before merge.",
+      "source": "self-hosting.v1",
+      "timestamp": "2026-03-30T12:00:00Z"
+    },
+    {
+      "title": "Keep browser capability out of root /kstack help",
+      "rationale": "The browser runtime remains powerful infrastructure, but the public workflow surface should remain the routed KStack command set only.",
+      "source": "self-hosting.v1",
+      "timestamp": "2026-03-30T12:00:00Z"
+    },
+    {
+      "title": "Cut a real 1.0.0 release",
+      "rationale": "The repository should ship a clean self-hosted V1 baseline instead of staying in a pre-1.0 migration posture.",
+      "source": "self-hosting.v1",
+      "timestamp": "2026-03-30T12:00:00Z"
+    }
+  ],
+  "rejected_options": [],
+  "assumptions": [
+    "main is the long-lived self-hosting baseline branch for this repository.",
+    "Feature-branch contracts remain committed after merge even though raw feature-branch state does not.",
+    "The source-checkout installation flow remains the canonical way to install and update KStack in V1."
+  ],
+  "deltas_since_last_sprint": [],
+  "findings": [],
+  "tests_required": [
+    "bun run build",
+    "bun test",
+    "bun run skill:check",
+    "bin/kstack-state export-contract --check --branch main",
+    "bin/kstack-state verify-self-hosting"
+  ],
+  "tests_satisfied": [
+    "bun run build",
+    "bun test",
+    "bun run skill:check",
+    "bin/kstack-state export-contract --check --branch main",
+    "bin/kstack-state verify-self-hosting"
+  ],
+  "docs_to_regenerate": [],
+  "risk_level": "medium",
+  "routing": {
+    "mode": "execution",
+    "change_type": "architecture",
+    "required_lenses": [
+      "architecture"
+    ],
+    "reason": "The self-hosted V1 baseline spans workflow core, docs, CI, and release surfaces."
+  },
+  "escalation_status": "none",
+  "provenance": {
+    "created_at": "2026-03-30T12:00:00Z",
+    "updated_at": "2026-03-30T12:00:00Z",
+    "migrated_from": [],
+    "sources": [
+      {
+        "source": "self-hosting.v1",
+        "timestamp": "2026-03-30T12:00:00Z",
+        "note": "Finalize the committed self-hosting baseline for KStack 1.0.0."
+      }
+    ]
+  }
+}

@@ -10,6 +10,7 @@ import {
   addAssumption,
   appendDeltaRecord,
   buildHumanSummary,
+  checkBranchContractFreshness,
   exportBranchContract,
   changedFilesAgainstBase,
   createEmptyWorkflowState,
@@ -30,6 +31,7 @@ import {
   setSprintBrief,
   upsertFinding,
   validateWorkflowState,
+  verifySelfHostingInvariants,
   writeWorkflowState,
   type DecisionRecord,
   type DeltaRecord,
@@ -50,9 +52,10 @@ Commands:
   ensure
   show [field]
   summary
-  export-contract
-  export-pr
+  export-contract [--check] [--branch <name>]
+  export-pr [--branch <name>]
   ready [--json] [--branch <name>]
+  verify-self-hosting
   merge <json-file|->
   set-intent <json-file|->
   set-sprint <json-file|->
@@ -107,6 +110,30 @@ function parseReadyArgs(args: string[]): { asJson: boolean; branchOverride?: str
   }
 
   return { asJson, branchOverride };
+}
+
+function parseBranchOverrideArgs(
+  args: string[],
+  opts: { allowCheck?: boolean } = {},
+): { branchOverride?: string; checkOnly: boolean } {
+  let branchOverride: string | undefined;
+  let checkOnly = false;
+
+  for (let index = 0; index < args.length; index += 1) {
+    const arg = args[index];
+    if (opts.allowCheck && arg === '--check') {
+      checkOnly = true;
+      continue;
+    }
+    if (arg === '--branch') {
+      branchOverride = args[index + 1] || usage();
+      index += 1;
+      continue;
+    }
+    usage();
+  }
+
+  return { branchOverride, checkOnly };
 }
 
 function getByPath(root: unknown, fieldPath: string): unknown {
@@ -166,21 +193,43 @@ async function main(): Promise<void> {
       return;
     }
     case 'export-contract': {
-      const state = loadWorkflowState(defaultPaths);
-      const contract = exportBranchContract(state, defaultPaths);
+      const { branchOverride, checkOnly } = parseBranchOverrideArgs(rest, { allowCheck: true });
+      const paths = resolveWorkflowPaths(repoRoot, branchOverride);
+      const state = loadWorkflowState(paths, { ensure: false });
+
+      if (checkOnly) {
+        const freshness = checkBranchContractFreshness(state, paths);
+        printJson({
+          branch: freshness.contract.branch,
+          normalized_branch: freshness.contract.normalized_branch,
+          ok: freshness.ok,
+          missing_files: freshness.missing_files,
+          stale_files: freshness.stale_files,
+          contract_json: paths.contractJsonFile,
+          contract_markdown: paths.contractMarkdownFile,
+        });
+        if (!freshness.ok) {
+          process.exitCode = 1;
+        }
+        return;
+      }
+
+      const contract = exportBranchContract(state, paths);
       printJson({
         branch: contract.branch,
         status: contract.readiness.status,
-        contract_json: defaultPaths.contractJsonFile,
-        contract_markdown: defaultPaths.contractMarkdownFile,
+        contract_json: paths.contractJsonFile,
+        contract_markdown: paths.contractMarkdownFile,
       });
       return;
     }
     case 'export-pr': {
-      const state = readWorkflowState(defaultPaths);
-      const contract = state ? exportBranchContract(state, defaultPaths) : readBranchContract(defaultPaths);
+      const { branchOverride } = parseBranchOverrideArgs(rest);
+      const paths = resolveWorkflowPaths(repoRoot, branchOverride);
+      const state = readWorkflowState(paths);
+      const contract = state ? exportBranchContract(state, paths) : readBranchContract(paths);
       if (!contract) {
-        throw new Error(`No workflow state or branch contract found for ${defaultPaths.normalizedBranch}`);
+        throw new Error(`No workflow state or branch contract found for ${paths.normalizedBranch}`);
       }
       process.stdout.write(renderPullRequestBody(contract));
       return;
@@ -213,6 +262,14 @@ async function main(): Promise<void> {
         console.log(lines.join('\n'));
       }
       if (contract.readiness.status === 'blocked') {
+        process.exitCode = 1;
+      }
+      return;
+    }
+    case 'verify-self-hosting': {
+      const result = verifySelfHostingInvariants(repoRoot);
+      printJson(result);
+      if (!result.ok) {
         process.exitCode = 1;
       }
       return;

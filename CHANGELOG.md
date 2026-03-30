@@ -1,5 +1,28 @@
 # Changelog
 
+## [1.0.0] - 2026-03-30 — Self-Hosted KStack
+
+KStack now ships as a clean self-hosted V1: the KStack repository itself is managed through committed KStack state and committed branch contracts, the public workflow surface is only `/kstack`, and GitHub validation matches the product that actually ships.
+
+### Added
+
+- **Committed self-hosting baseline on `main`.** The repo now carries `.kstack/state/main.json` plus committed `.kstack/contracts/main.json` and `.md` as the canonical main-branch baseline.
+- **Deterministic contract freshness checks.** `bin/kstack-state export-contract --check --branch main` now verifies that committed branch contracts match committed branch state without rewriting files.
+- **Self-hosting invariant check.** `bin/kstack-state verify-self-hosting` validates the committed main baseline and prevents `main` from accumulating raw feature-branch state files.
+- **Permanent maintainer runbook.** Added a maintainer guide for developing KStack with KStack itself.
+
+### Changed
+
+- **Public `/kstack` help is clean.** Root skill generation no longer embeds browser command tables or snapshot-flag reference material. The routed KStack workflow is the only public help surface.
+- **GitHub validation now matches the shipped repo.** Stale eval matrices were replaced with `Repository Validation`, `Periodic Validation`, and `Self-Hosting Invariants`.
+- **Raw state lifecycle is explicit.** `main` keeps only `.kstack/state/main.json`, feature branches may carry raw branch state while active, and committed `.kstack/contracts/<branch>.json` and `.md` remain as durable history after merge.
+- **Uninstall is self-hosting-safe.** `kstack-uninstall` no longer removes committed repo state or committed contracts by default.
+- **Version metadata is aligned on 1.0.0.** `VERSION` and `package.json` now describe the same V1 release.
+
+### Removed
+
+- **Stale CI targets for deleted surfaces.** The repo no longer advertises or validates removed design, Gemini, or old browse-specific eval paths as part of the active release gate.
+
 ## [0.13.1.0] - 2026-03-28 — Defense in Depth
 
 The browse server runs on localhost and requires a token for access, so these issues only matter if a malicious process is already running on your machine (e.g., a compromised npm postinstall script). This release hardens the attack surface so that even in that scenario, the damage is contained.

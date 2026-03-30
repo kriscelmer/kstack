@@ -22,6 +22,8 @@ describe('browse config', () => {
     const gitignore = fs.readFileSync(path.join(projectDir, '.gitignore'), 'utf-8');
     expect(gitignore).toContain('.kstack/*');
     expect(gitignore).toContain('!.kstack/contracts/');
+    expect(gitignore).not.toContain('!.kstack/state/');
+    expect(gitignore).not.toContain('!.kstack/state/**');
   });
 
   test('reads version hashes from adjacent .version files', () => {

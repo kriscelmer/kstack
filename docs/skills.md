@@ -2,15 +2,15 @@
 
 ## Public Entry Point
 
-KStack now exposes one public skill:
+KStack exposes one public skill:
 
 | Command | Purpose |
 | --- | --- |
 | `/kstack` | Help mode. Explain how the workflow works and list supported subcommands. |
 
-Run `/kstack` or `/kstack help` when you need to discover the available operations. All actual workflow actions are routed through `/kstack <subcommand>`.
+Run `/kstack` or `/kstack help` when you need to discover the available operations. All workflow actions are routed through `/kstack <subcommand>`.
 
-## Primary Routed Subcommands
+## Supported Routed Subcommands
 
 | Command | Purpose |
 | --- | --- |
@@ -20,19 +20,10 @@ Run `/kstack` or `/kstack help` when you need to discover the available operatio
 | `/kstack implement` | Read the current sprint and implement against it. |
 | `/kstack ingest-learning` | Record what changed after review, QA, or feedback. |
 | `/kstack review` | Find code-level bugs and missing validation. |
-| `/kstack qa` | Test, fix, and verify in a real browser. |
-| `/kstack qa-only` | Test and report without changing code. |
+| `/kstack qa` | Test in a real browser, then either fix-and-verify or report-only depending on the request. |
 | `/kstack cso` | Run the security lens. |
 | `/kstack document-release` | Sync docs with shipped behavior. |
 | `/kstack ship` | Final release gate. |
-| `/kstack browse` | Use the browser runtime directly. |
-| `/kstack careful` | Activate destructive-command warnings. |
-| `/kstack freeze` | Restrict edits to one directory or module. |
-| `/kstack guard` | Combine careful and freeze. |
-| `/kstack unfreeze` | Remove a previous freeze boundary. |
-| `/kstack upgrade` | Update the local KStack installation. |
-
-Routed commands are meant to be short and neutral because the workflow is state-native. The subcommand name should describe the transition or operation being performed, not a persona.
 
 The branch contract and PR body are generated through the state CLI, not through a separate public skill:
 
@@ -42,16 +33,6 @@ bin/kstack-state export-pr
 bin/kstack-state ready
 ```
 
-## Legacy Wrappers
-
-| Command | Maps To |
-| --- | --- |
-| `/kstack office-hours` | `/kstack discover` |
-| `/kstack plan-ceo-review` | `/kstack sprint-freeze` + `product` lens |
-| `/kstack plan-eng-review` | `/kstack sprint-freeze` + `architecture` lens |
-| `/kstack plan-design-review` | `/kstack sprint-freeze` + `design` lens |
-| `/kstack autoplan` | `/kstack discover` + `/kstack sprint-freeze` + all lenses |
-
 ## Suggested Use Order
 
 1. `/kstack`
@@ -60,7 +41,14 @@ bin/kstack-state ready
 4. `/kstack sprint-freeze`
 5. export the branch contract and open a Draft PR
 6. `/kstack implement`
-7. `/kstack review` and `/kstack qa`
-8. `/kstack ingest-learning` when assumptions or scope move
-9. `/kstack document-release`
-10. `/kstack ship`
+7. `/kstack review`
+8. `/kstack qa`
+9. `/kstack ingest-learning` when assumptions or scope move
+10. `/kstack document-release`
+11. `/kstack ship`
+
+## Notes
+
+- Direct browser capability still exists as runtime infrastructure and shell tooling, but it is not a routed `/kstack` command.
+- Design-specific review is represented as a `design` lens in state and routing, not as a separate public skill.
+- Updating KStack is a shell workflow documented in the installation guide, not a routed skill.

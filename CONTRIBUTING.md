@@ -1,95 +1,53 @@
 # Contributing
 
-## Development Setup
+## Development Loop
 
 ```bash
 bun install
 bun run build
 bun test
-```
-
-If `bun` is installed outside your shell PATH, use:
-
-```bash
-BUN_BIN="${BUN_BIN:-$HOME/.bun/bin/bun}" "$BUN_BIN" run build
-BUN_BIN="${BUN_BIN:-$HOME/.bun/bin/bun}" "$BUN_BIN" test
-```
-
-`kstack` is Codex-only. The build:
-
-- regenerates all `SKILL.md` files
-- refreshes `.agents/skills/kstack`
-- compiles the browse CLI
-- compiles `kstack-state`
-- compiles `kstack-init`
-
-## Repository Rules
-
-- Edit `*/SKILL.md.tmpl`, not generated `SKILL.md`.
-- Keep workflow truth in `.kstack/state/`, not ad hoc plan files.
-- Keep raw operational state in `.kstack/state/` and durable branch contracts in `.kstack/contracts/`.
-- Prefer `kstack-*` binaries and `KSTACK_*` environment variables in new code.
-- Leave `gstack-*` wrappers only for migration compatibility.
-- If intent changes mid-implementation, reflect that in docs and state-oriented code paths instead of encoding assumptions in chat-only prose.
-
-## What To Update When Behavior Changes
-
-Any public behavior change should update:
-
-- `README.md`
-- `AGENTS.md`
-- `ARCHITECTURE.md`
-- `docs/skills.md`
-- `docs/installation-guide.md`
-- `docs/typical-workflow.md` when the workflow loop changed
-- `docs/kstack-concept.md` when the design philosophy changed
-- `docs/migration-to-kstack.md` when migration semantics changed
-
-## Testing Focus
-
-The test suite covers:
-
-- workflow state schema and mutation rules
-- routing heuristics
-- generator freshness and output shape
-- Codex-only setup behavior
-- utility binaries and compatibility wrappers
-- contract projection and readiness evaluation
-- browse path resolution under `.kstack/`
-
-Run:
-
-```bash
-bun test
 bun run skill:check
 ```
 
-before shipping doc or workflow changes.
+## Workflow Rules
 
-## Working On Skills
+- Treat `.kstack/state/<branch>.json` as workflow truth.
+- Use `/kstack` as the only public skill entrypoint.
+- Keep changes branch-scoped and contract-driven.
+- On `main`, keep only `.kstack/state/main.json`; raw feature-branch state must be removed before merge.
+- If intent changes mid-sprint, record the delta with `/kstack ingest-learning` and refresh `/kstack sprint-freeze` when needed.
 
-The important workflow pattern is:
+## Editing Rules
 
-1. the root template describes the routed `/kstack` entrypoint
-2. subcommand templates describe `/kstack <subcommand>` behavior
-3. the generator produces in-repo `SKILL.md` files
-4. the generator produces `.agents/skills/kstack/SKILL.md` for the public router
-5. the generator produces `.agents/skills/kstack/<subcommand>/SKILL.md` for internal routed guides
-6. `./setup` exposes only `~/.codex/skills/kstack` as the public skill
+- Edit `SKILL.md.tmpl`, not generated `SKILL.md`.
+- Keep public routed commands limited to the supported KStack surface.
+- Keep browser capability as runtime infrastructure, not as a second public workflow surface.
+- Keep repo-facing text in English.
+- Do not reintroduce old product naming, old runtime paths, or retired wrapper commands.
+- Keep committed `.kstack/contracts/<branch>.json` and `.md` files as the durable branch-history artifacts after merge.
 
-Do not hand-edit generated skill output.
+## Command Surface
 
-## Working On Workflow State
+Supported routed commands:
 
-If you change:
+- `/kstack init`
+- `/kstack discover`
+- `/kstack sprint-freeze`
+- `/kstack implement`
+- `/kstack ingest-learning`
+- `/kstack review`
+- `/kstack qa`
+- `/kstack cso`
+- `/kstack document-release`
+- `/kstack ship`
 
-- `WorkflowStateV1`
-- routing heuristics
-- intent, sprint, delta, or finding semantics
-- setup paths
+## Validation
 
-you should update:
+Before landing a change:
 
-- docs
-- tests
-- any shell-facing `kstack-*` utility that reads or writes state
+- run `bun run build`
+- run `bun test`
+- run `bun run skill:check`
+- run `bun run bin/kstack-state.ts export-contract --check --branch main`
+- run `bun run bin/kstack-state.ts verify-self-hosting` before landing changes on `main`
+- verify that docs, runtime strings, and templates remain KStack-only

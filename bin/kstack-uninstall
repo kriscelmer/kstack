@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# kstack-uninstall — remove kstack skills, state, and repo-local runtime files
+# kstack-uninstall — remove installed kstack runtime and optional local generated artifacts
 set -uo pipefail
 
 if [ -z "${HOME:-}" ]; then
@@ -8,22 +8,24 @@ if [ -z "${HOME:-}" ]; then
 fi
 
 KSTACK_DIR="${KSTACK_DIR:-$(cd "$(dirname "$0")/.." && pwd)}"
-STATE_DIR="${KSTACK_STATE_DIR:-${GSTACK_STATE_DIR:-$HOME/.kstack}}"
+STATE_DIR="${KSTACK_STATE_DIR:-$HOME/.kstack}"
 GIT_ROOT="$(git rev-parse --show-toplevel 2>/dev/null || true)"
 FORCE=0
 KEEP_STATE=0
+REMOVE_REPO_RUNTIME=0
 
 while [ $# -gt 0 ]; do
   case "$1" in
     --force) FORCE=1; shift ;;
     --keep-state) KEEP_STATE=1; shift ;;
+    --remove-repo-runtime) REMOVE_REPO_RUNTIME=1; shift ;;
     -h|--help)
       sed -n '2,/^[^#]/{ /^#/s/^# \{0,1\}//p; }' "$0"
       exit 0
       ;;
     *)
       echo "Unknown option: $1" >&2
-      echo "Usage: kstack-uninstall [--force] [--keep-state]" >&2
+      echo "Usage: kstack-uninstall [--force] [--keep-state] [--remove-repo-runtime]" >&2
       exit 1
       ;;
   esac
@@ -34,8 +36,7 @@ if [ "$FORCE" -eq 0 ]; then
   [ -d "$HOME/.codex/skills/kstack" ] && echo "  ~/.codex/skills/kstack"
   [ -d "$STATE_DIR" ] && [ "$KEEP_STATE" -eq 0 ] && echo "  $STATE_DIR"
   if [ -n "$GIT_ROOT" ]; then
-    [ -d "$GIT_ROOT/.kstack" ] && echo "  $GIT_ROOT/.kstack"
-    [ -d "$GIT_ROOT/.agents/skills/kstack" ] && echo "  $GIT_ROOT/.agents/skills/kstack"
+    [ -d "$GIT_ROOT/.agents/skills/kstack" ] && [ "$REMOVE_REPO_RUNTIME" -eq 1 ] && echo "  $GIT_ROOT/.agents/skills/kstack"
   fi
   printf "Continue? [y/N] "
   read -r reply
@@ -48,15 +49,19 @@ fi
 REMOVED=()
 
 if [ -d "$HOME/.codex/skills" ]; then
-  for item in "$HOME/.codex/skills"/kstack "$HOME/.codex/skills"/discover "$HOME/.codex/skills"/sprint-freeze "$HOME/.codex/skills"/ingest-learning "$HOME/.codex/skills"/review "$HOME/.codex/skills"/qa "$HOME/.codex/skills"/qa-only "$HOME/.codex/skills"/ship "$HOME/.codex/skills"/cso "$HOME/.codex/skills"/document-release "$HOME/.codex/skills"/browse "$HOME/.codex/skills"/careful "$HOME/.codex/skills"/freeze "$HOME/.codex/skills"/guard "$HOME/.codex/skills"/unfreeze "$HOME/.codex/skills"/investigate "$HOME/.codex/skills"/design-review "$HOME/.codex/skills"/setup-browser-cookies "$HOME/.codex/skills"/office-hours "$HOME/.codex/skills"/plan-ceo-review "$HOME/.codex/skills"/plan-eng-review "$HOME/.codex/skills"/plan-design-review "$HOME/.codex/skills"/autoplan "$HOME/.codex/skills"/upgrade; do
-    [ -e "$item" ] || [ -L "$item" ] || continue
+  item="$HOME/.codex/skills/kstack"
+  if [ -e "$item" ] || [ -L "$item" ]; then
     rm -rf "$item"
     REMOVED+=("$item")
-  done
+  fi
 fi
 
-if [ -n "$GIT_ROOT" ]; then
-  [ -d "$GIT_ROOT/.kstack" ] && rm -rf "$GIT_ROOT/.kstack" && REMOVED+=("$GIT_ROOT/.kstack")
+if [ -n "$GIT_ROOT" ] && [ "$REMOVE_REPO_RUNTIME" -eq 1 ]; then
+  item="$GIT_ROOT/.agents/skills/kstack"
+  if [ -e "$item" ] || [ -L "$item" ]; then
+    rm -rf "$item"
+    REMOVED+=("$item")
+  fi
 fi
 
 if [ "$KEEP_STATE" -eq 0 ] && [ -d "$STATE_DIR" ]; then

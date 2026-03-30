@@ -200,6 +200,26 @@ export interface BranchContractV1 {
   };
 }
 
+export interface BranchContractFreshnessCheck {
+  ok: boolean;
+  contract: BranchContractV1;
+  expected_json: string;
+  expected_markdown: string;
+  missing_files: string[];
+  stale_files: string[];
+}
+
+export interface SelfHostingInvariantCheck {
+  ok: boolean;
+  current_branch: string;
+  main_state_file: string;
+  main_contract_json: string;
+  main_contract_markdown: string;
+  raw_state_files: string[];
+  errors: string[];
+  warnings: string[];
+}
+
 export interface WorkflowPaths {
   repoRoot: string;
   branch: string;
@@ -212,8 +232,6 @@ export interface WorkflowPaths {
   contractJsonFile: string;
   contractMarkdownFile: string;
   globalStateDir: string;
-  legacyStateRoot: string;
-  legacyGlobalStateDir: string;
 }
 
 function runGit(args: string[], cwd: string): string {
@@ -283,13 +301,20 @@ export function resolveWorkflowPaths(repoRoot: string = getRepoRoot(), branchOve
     contractJsonFile: path.join(contractsDir, `${normalizedBranch}.json`),
     contractMarkdownFile: path.join(contractsDir, `${normalizedBranch}.md`),
     globalStateDir,
-    legacyStateRoot: path.join(repoRoot, '.gstack'),
-    legacyGlobalStateDir: path.join(os.homedir(), '.gstack'),
   };
 }
 
 function now(): string {
   return new Date().toISOString();
+}
+
+function repoRelativePath(repoRoot: string, targetPath: string): string {
+  const relative = path.relative(repoRoot, targetPath);
+  return relative.split(path.sep).join('/');
+}
+
+function serializeJson(value: unknown): string {
+  return `${JSON.stringify(value, null, 2)}\n`;
 }
 
 function defaultRouting(): RoutingDecision {
@@ -593,32 +618,6 @@ function readJsonFile<T>(filePath: string): T | null {
   }
 }
 
-function collectLegacyArtifacts(paths: WorkflowPaths): string[] {
-  const artifacts: string[] = [];
-  const localCandidates = [
-    path.join(paths.legacyStateRoot, 'browse.json'),
-    path.join(paths.legacyStateRoot, 'qa-reports'),
-    path.join(paths.legacyStateRoot, 'security-reports'),
-    path.join(paths.legacyStateRoot, 'design-reports'),
-    path.join(paths.legacyStateRoot, 'deploy-reports'),
-  ];
-
-  for (const candidate of localCandidates) {
-    if (fs.existsSync(candidate)) artifacts.push(candidate);
-  }
-
-  const slug = getRemoteSlug(paths.repoRoot);
-  const legacyProjectsDir = path.join(paths.legacyGlobalStateDir, 'projects', slug);
-  if (fs.existsSync(legacyProjectsDir)) {
-    const files = fs.readdirSync(legacyProjectsDir)
-      .filter(file => file.includes(paths.normalizedBranch) || file.endsWith('-reviews.jsonl'))
-      .map(file => path.join(legacyProjectsDir, file));
-    artifacts.push(...files);
-  }
-
-  return Array.from(new Set(artifacts));
-}
-
 export function readWorkflowState(paths: WorkflowPaths = resolveWorkflowPaths()): WorkflowStateV1 | null {
   const raw = readJsonFile<unknown>(paths.stateFile);
   if (!raw) return null;
@@ -630,11 +629,7 @@ export function ensureWorkflowState(paths: WorkflowPaths = resolveWorkflowPaths(
   const existing = readWorkflowState(paths);
   if (existing) return existing;
 
-  const legacyArtifacts = collectLegacyArtifacts(paths);
-  const initial = createEmptyWorkflowState(
-    legacyArtifacts,
-    legacyArtifacts.length > 0 ? 'kstack-state.migrated' : 'kstack-state.ensure',
-  );
+  const initial = createEmptyWorkflowState([], 'kstack-state.ensure');
   writeWorkflowState(initial, paths);
   return initial;
 }
@@ -954,8 +949,8 @@ export function buildBranchContract(
     workflow_schema_version: WORKFLOW_SCHEMA_VERSION,
     branch: paths.branch,
     normalized_branch: paths.normalizedBranch,
-    generated_at: now(),
-    state_file: paths.stateFile,
+    generated_at: state.provenance.updated_at,
+    state_file: repoRelativePath(paths.repoRoot, paths.stateFile),
     intent: {
       present: state.intent_record !== null,
       raw_request: state.intent_record?.raw_request ?? null,
@@ -1130,7 +1125,7 @@ export function writeBranchContract(
   paths: WorkflowPaths = resolveWorkflowPaths(),
 ): void {
   ensureWorkflowDirs(paths);
-  fs.writeFileSync(paths.contractJsonFile, `${JSON.stringify(contract, null, 2)}\n`, 'utf-8');
+  fs.writeFileSync(paths.contractJsonFile, serializeJson(contract), 'utf-8');
   fs.writeFileSync(paths.contractMarkdownFile, renderBranchContractMarkdown(contract), 'utf-8');
 }
 
@@ -1141,6 +1136,104 @@ export function exportBranchContract(
   const contract = buildBranchContract(state, paths);
   writeBranchContract(contract, paths);
   return contract;
+}
+
+export function checkBranchContractFreshness(
+  state: WorkflowStateV1,
+  paths: WorkflowPaths = resolveWorkflowPaths(),
+): BranchContractFreshnessCheck {
+  const contract = buildBranchContract(state, paths);
+  const expectedJson = serializeJson(contract);
+  const expectedMarkdown = renderBranchContractMarkdown(contract);
+  const missingFiles: string[] = [];
+  const staleFiles: string[] = [];
+
+  if (!fs.existsSync(paths.contractJsonFile)) {
+    missingFiles.push(paths.contractJsonFile);
+  } else if (fs.readFileSync(paths.contractJsonFile, 'utf-8') !== expectedJson) {
+    staleFiles.push(paths.contractJsonFile);
+  }
+
+  if (!fs.existsSync(paths.contractMarkdownFile)) {
+    missingFiles.push(paths.contractMarkdownFile);
+  } else if (fs.readFileSync(paths.contractMarkdownFile, 'utf-8') !== expectedMarkdown) {
+    staleFiles.push(paths.contractMarkdownFile);
+  }
+
+  return {
+    ok: missingFiles.length === 0 && staleFiles.length === 0,
+    contract,
+    expected_json: expectedJson,
+    expected_markdown: expectedMarkdown,
+    missing_files: missingFiles,
+    stale_files: staleFiles,
+  };
+}
+
+export function verifySelfHostingInvariants(
+  repoRoot: string = getRepoRoot(),
+): SelfHostingInvariantCheck {
+  const mainPaths = resolveWorkflowPaths(repoRoot, 'main');
+  const currentBranch = getCurrentBranch(repoRoot);
+  const errors: string[] = [];
+  const warnings: string[] = [];
+
+  if (!fs.existsSync(mainPaths.stateFile)) {
+    errors.push(`Missing required self-hosting state file: ${repoRelativePath(repoRoot, mainPaths.stateFile)}.`);
+  }
+
+  let mainState: WorkflowStateV1 | null = null;
+  if (fs.existsSync(mainPaths.stateFile)) {
+    try {
+      mainState = validateWorkflowState(JSON.parse(fs.readFileSync(mainPaths.stateFile, 'utf-8')));
+    } catch (error) {
+      errors.push(`Invalid main workflow state: ${error instanceof Error ? error.message : String(error)}.`);
+    }
+  }
+
+  if (!fs.existsSync(mainPaths.contractJsonFile)) {
+    errors.push(`Missing required main branch contract JSON: ${repoRelativePath(repoRoot, mainPaths.contractJsonFile)}.`);
+  }
+
+  if (!fs.existsSync(mainPaths.contractMarkdownFile)) {
+    errors.push(`Missing required main branch contract Markdown: ${repoRelativePath(repoRoot, mainPaths.contractMarkdownFile)}.`);
+  }
+
+  if (mainState) {
+    const freshness = checkBranchContractFreshness(mainState, mainPaths);
+    for (const filePath of freshness.missing_files) {
+      const relative = repoRelativePath(repoRoot, filePath);
+      if (!errors.some(item => item.includes(relative))) {
+        errors.push(`Missing committed contract artifact: ${relative}.`);
+      }
+    }
+    for (const filePath of freshness.stale_files) {
+      errors.push(`Stale committed contract artifact: ${repoRelativePath(repoRoot, filePath)}.`);
+    }
+  }
+
+  const rawStateFiles = fs.existsSync(mainPaths.stateDir)
+    ? fs.readdirSync(mainPaths.stateDir)
+      .filter(entry => entry.endsWith('.json'))
+      .sort()
+    : [];
+  const extraStateFiles = rawStateFiles.filter(entry => entry !== 'main.json');
+  if (normalizeBranchName(currentBranch) === 'main' && extraStateFiles.length > 0) {
+    errors.push(`main must not contain extra raw branch state files: ${extraStateFiles.join(', ')}.`);
+  } else if (extraStateFiles.length > 0) {
+    warnings.push(`Feature branch raw state is present in this worktree: ${extraStateFiles.join(', ')}.`);
+  }
+
+  return {
+    ok: errors.length === 0,
+    current_branch: currentBranch,
+    main_state_file: repoRelativePath(repoRoot, mainPaths.stateFile),
+    main_contract_json: repoRelativePath(repoRoot, mainPaths.contractJsonFile),
+    main_contract_markdown: repoRelativePath(repoRoot, mainPaths.contractMarkdownFile),
+    raw_state_files: rawStateFiles.map(file => `.kstack/state/${file}`),
+    errors,
+    warnings,
+  };
 }
 
 export function inferRoutingFromFiles(changedFiles: string[]): RoutingDecision {
@@ -1245,8 +1338,5 @@ export function buildHumanSummary(state: WorkflowStateV1, paths: WorkflowPaths =
     `Readiness: ${readiness.status}`,
   ];
 
-  if (state.provenance.migrated_from.length > 0) {
-    lines.push(`Migrated legacy inputs: ${state.provenance.migrated_from.length}`);
-  }
   return lines.join('\n');
 }

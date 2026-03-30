@@ -1,9 +1,9 @@
 /**
- * gstack browse — background service worker
+ * kstack browse — background service worker
  *
  * Polls /health every 10s to detect browse server.
  * Fetches /refs on snapshot completion, relays to content script.
- * Proxies commands from sidebar → browse server.
+ * Proxies extension commands to the browse server.
  * Updates badge: amber (connected), gray (disconnected).
  */
 
@@ -60,8 +60,7 @@ async function checkHealth() {
     if (!resp.ok) { setDisconnected(); return; }
     const data = await resp.json();
     if (data.status === 'healthy') {
-      // Forward chatEnabled so sidepanel can show/hide chat tab
-      setConnected({ ...data, chatEnabled: !!data.chatEnabled });
+      setConnected(data);
     } else {
       setDisconnected();
     }
@@ -77,7 +76,10 @@ function setConnected(healthData) {
   chrome.action.setBadgeText({ text: ' ' });
 
   // Broadcast health to popup and side panel (include token for sidepanel auth)
-  chrome.runtime.sendMessage({ type: 'health', data: { ...healthData, token: authToken } }).catch(() => {});
+  chrome.runtime.sendMessage({
+    type: 'health',
+    data: { ...healthData, token: authToken, port: serverPort },
+  }).catch(() => {});
 
   // Notify content scripts on connection change
   if (wasDisconnected) {
@@ -194,36 +196,9 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
     return;
   }
 
-  // Sidebar → browse server command proxy
+  // Extension → browse server command proxy
   if (msg.type === 'command') {
     executeCommand(msg.command, msg.args).then(result => sendResponse(result));
-    return true;
-  }
-
-  // Sidebar → Claude Code (file-based message queue)
-  if (msg.type === 'sidebar-command') {
-    const base = getBaseUrl();
-    if (!base || !authToken) {
-      sendResponse({ error: 'Not connected' });
-      return true;
-    }
-    // Capture the active tab's URL so the sidebar agent knows what page
-    // the user is actually looking at (Playwright's page.url() can be stale
-    // if the user navigated manually in headed mode).
-    chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
-      const activeTabUrl = tabs?.[0]?.url || null;
-      fetch(`${base}/sidebar-command`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${authToken}`,
-        },
-        body: JSON.stringify({ message: msg.message, activeTabUrl }),
-      })
-        .then(r => r.json())
-        .then(data => sendResponse(data))
-        .catch(err => sendResponse({ error: err.message }));
-    });
     return true;
   }
 });

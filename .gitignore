@@ -1,7 +1,6 @@
 .env
 node_modules/
 browse/dist/
-design/dist/
 bin/kstack-state
 bin/kstack-init
 # KSTACK:BEGIN
@@ -9,13 +8,14 @@ bin/kstack-init
 !.kstack/contracts/
 !.kstack/contracts/**
 # KSTACK:END
-.gstack/
-.claude/skills/
+# Self-hosting exception: this repository tracks canonical branch state.
+!.kstack/state/
+!.kstack/state/**
 .agents/
 .context/
 extension/.auth.json
-.gstack-worktrees/
-.kstack-worktrees/
+-worktrees/
+-dev/
 /tmp/
 *.log
 bun.lock

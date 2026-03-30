@@ -6,7 +6,7 @@
 
 - `.kstack/state/<normalized-branch>.json`
 
-That file is versioned through `WorkflowStateV1` and currently carries:
+That file is versioned through `WorkflowStateV1` and carries:
 
 - `intent_record`
 - `active_sprint_brief`
@@ -26,32 +26,58 @@ That file is versioned through `WorkflowStateV1` and currently carries:
 - `escalation_status`
 - `provenance`
 
-## The Problem It Solves
+## Responsibility Split
 
-Traditional AI-assisted coding workflows scatter planning truth across:
+- **Git** is the source of code truth.
+- **GitHub** is the source of collaboration and enforcement.
+- **KStack** is the source of workflow truth for the branch.
 
-- chat transcripts
-- design docs
-- review logs
-- QA notes
-- shell output
-- unstated human memory
+## Core Architecture
 
-That makes the workflow hard to inspect and easy to drift. A reviewer can be reasoning from a stale plan while the implementation has already moved on.
+KStack is organized around four core responsibilities:
 
-`kstack` treats workflow state as a first-class artifact inside the repo. Discovery, execution, QA, security, and release work all write into the same branch-local object.
+### State core
 
-Git and GitHub still retain their normal roles:
+Responsible for:
 
-- Git is the source of code truth.
-- GitHub is the source of collaboration and enforcement.
-- KStack is the source of workflow truth for the branch.
+- loading workflow state
+- normalizing branch identity
+- schema validation
+- atomic writes and updates
+- contract projection generation
+
+### Transition core
+
+Responsible for:
+
+- discovery to sprint-freeze transitions
+- delta ingest transitions
+- normalized finding ingestion
+- semantic readiness evaluation
+
+### Router core
+
+Responsible for:
+
+- one public skill surface: `/kstack`
+- deterministic subcommand routing
+- supported command registry
+- help and error handling
+
+### Runtime layer
+
+Responsible for:
+
+- browser automation
+- extension support
+- local CLI affordances
+- generated skill/runtime layout
+
+The runtime layer is not the workflow brain. The state and transition layer are the workflow brain.
 
 ## Discovery, Freeze, Delta
 
-The architecture is intentionally centered on three workflow phases:
-
-### 1. Discovery
+### Discovery
 
 Discovery produces an `IntentRecord`.
 
@@ -64,7 +90,7 @@ Its job is to answer:
 - what wedge is worth attempting first
 - what remains unresolved
 
-### 2. Sprint Freeze
+### Sprint Freeze
 
 Sprint freeze produces the active `SprintBrief`.
 
@@ -73,12 +99,12 @@ Its job is to answer:
 - what problem is being solved in this sprint
 - what behavior is explicitly in scope
 - what behavior is explicitly out of scope
-- what acceptance checks define “done”
+- what acceptance checks define done
 - what surfaces are expected to change
 - what unresolved questions are tolerated
 - what should trigger escalation
 
-### 3. Delta Ingest
+### Delta Ingest
 
 Delta ingest produces `DeltaRecord`s.
 
@@ -92,65 +118,9 @@ Its job is to answer:
 - whether risk changed
 - whether the correct next action is continued execution, re-freeze, or renewed discovery
 
-This matters because intent drift is normal. `kstack` makes it explicit rather than pretending the first plan survived contact with implementation.
-
-## Routing
-
-Routing is deterministic and state-backed.
-
-The current route answers which mode the branch is in:
-
-- `discovery`
-- `execution`
-- `docs`
-- `review`
-- `qa`
-- `security`
-
-It also records:
-
-- `change_type`
-- `required_lenses`
-- the reason for the route
-
-That allows old role-based review concepts to survive as lenses instead of independent plan stacks.
-
-## Normalized Findings
-
-`kstack` uses one normalized `FindingRecord` shape across review, QA, security, and release checks.
-
-That prevents duplicated issue systems such as:
-
-- review comments in one place
-- QA issues in another
-- release blockers in a third
-
-Instead, different skills become different producers of the same record type.
-
-## Truth Precedence
-
-The system is opinionated about truth:
-
-1. `code`, `tests`, and config define actual behavior.
-2. `.kstack/state` defines workflow intent and current execution contract.
-3. `.kstack/contracts/` holds durable, commitable branch contract projections.
-4. `.kstack/reports/` holds local evidence-oriented projections derived from state plus code.
-5. chat context is advisory only.
-
-If chat and state conflict, the answer is not “remember harder”. The answer is “update the state”.
-
-## Runtime Layout
-
-- `.kstack/state/` stores canonical workflow state.
-- `.kstack/contracts/` stores tracked branch contract projections for Git and GitHub integration.
-- `.kstack/reports/` stores projections such as QA evidence or human-readable summaries.
-- `~/.kstack/` stores user-global config and install metadata.
-- `.agents/skills/kstack/` is the repo-local Codex runtime root used in development.
-- `~/.codex/skills/kstack` is the installed Codex runtime root.
-
 ## Contract Projection Layer
 
-Raw workflow state is intentionally local and operational.
+Raw workflow state is normally local and operational.
 
 Tracked branch contracts are separate:
 
@@ -159,9 +129,7 @@ Tracked branch contracts are separate:
   - `.kstack/contracts/<branch>.json`
   - `.kstack/contracts/<branch>.md`
 
-This hybrid projection model keeps runtime state noisy and local while still giving Git and GitHub a durable semantic artifact to review.
-
-The projected contract is built from:
+The projected contract is the durable semantic artifact for Git and GitHub. It contains:
 
 - intent summary
 - active sprint summary
@@ -172,47 +140,56 @@ The projected contract is built from:
 - delta summary since the last freeze
 - semantic readiness
 
-This is also the basis for PR body generation and the `kstack-ready` GitHub check.
+Self-hosting exception:
+
+- this repository intentionally commits `.kstack/state/main.json`
+- feature branches may commit their own raw branch state while active, but that raw state must be removed before merge
+- committed `.kstack/contracts/<branch>.json` and `.md` remain after merge as the durable branch-history projection
+- this is a repo-specific exception, not the default behavior KStack applies to other repositories
 
 ## Public Command Routing
 
-`kstack` exposes one public skill:
+KStack exposes one public skill:
 
 - `/kstack`
 
-That root skill is a router.
+Supported routed subcommands:
 
-- Bare `/kstack` and `/kstack help` are help mode. They explain the workflow and list supported subcommands.
-- `/kstack <subcommand>` loads the internal guide at `.agents/skills/kstack/<subcommand>/SKILL.md` or the repo-local equivalent during development.
-- There are no public top-level skills like `/discover` or `/review`. Those remain internal subcommand guides so the public namespace stays coherent.
+- `init`
+- `discover`
+- `sprint-freeze`
+- `implement`
+- `ingest-learning`
+- `review`
+- `qa`
+- `cso`
+- `document-release`
+- `ship`
 
-This matters because the routed entrypoint makes the workflow self-describing. New users only need to remember one command prefix, and new repos can be bootstrapped with `/kstack init`.
+There are no legacy wrapper commands and no secondary public routed surfaces.
 
 ## Browser Runtime
 
-The browse architecture is intentionally preserved:
+The browser runtime is preserved as infrastructure:
 
-- `browse/dist/browse` is the compiled CLI entrypoint.
-- `browse/src/server.ts` runs the persistent browser server.
+- `browse/dist/browse` is the compiled CLI entrypoint
+- `browse/src/server.ts` runs the persistent browser server
 - project-local browser state and logs live under `.kstack/`
 
-The browser runtime is not the workflow brain. It is a verification runtime that feeds evidence back into canonical state.
+It exists to feed evidence back into canonical state, not to compete with the routed workflow surface.
 
 ## Skill Generation
 
-Every `SKILL.md` file is generated from a `SKILL.md.tmpl` source. The generator writes:
+Every `SKILL.md` file is generated from a `SKILL.md.tmpl` source.
+
+The generator writes:
 
 - in-repo `SKILL.md`
 - `.agents/skills/kstack/SKILL.md` for the public router
-- `.agents/skills/kstack/<subcommand>/SKILL.md` for routed subcommands
+- `.agents/skills/kstack/<subcommand>/SKILL.md` for supported routed subcommands
 - `.agents/skills/kstack/agents/openai.yaml` for the public router
 
-The root runtime directory `.agents/skills/kstack/` also links shared runtime assets such as:
-
-- `bin/`
-- `browse/`
-- docs
-- version files
+Generation is driven by an explicit command registry, not by scanning every directory in the repo.
 
 ## Installation Model
 
@@ -223,10 +200,7 @@ The install model is:
 - source checkout in a repo
 - generated runtime under `.agents/skills/kstack`
 - installed public runtime under `~/.codex/skills/kstack`
-- internal subcommand guides nested under that runtime root
-- compatibility wrappers kept only where migration cost is low
-
-The repo no longer treats Claude, Gemini, or Kiro as equal host targets.
+- internal browser runtime bundled as a shared asset under that root
 
 ## GitHub Integration
 
@@ -237,6 +211,5 @@ The repository-level contract is:
 - Draft PR after `/kstack sprint-freeze`
 - PR description generated from the branch contract
 - `kstack-ready` complements CI by checking semantic readiness
-- existing Actions remain the mechanical gate layer
-
-This repo does not attempt to enforce branch protection or GitHub settings from code. Those remain repository settings, documented as recommendations.
+- `Repository Validation` checks build, tests, skill freshness, and main-contract freshness
+- `Self-Hosting Invariants` validates the committed main baseline on pushes to `main`

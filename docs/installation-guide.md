@@ -1,30 +1,24 @@
 # Installation Guide
 
-## Overview
-
-This guide covers:
-
-- prerequisites
-- global installation for everyday use
-- repo-local installation for development
-- verification
-- upgrade and reinstall paths
-- uninstall
-- troubleshooting
-
-`kstack` is Codex-only. There is no Claude, Gemini, or Kiro installation path.
-
 ## Prerequisites
 
-You need:
+Before installing `kstack`, make sure the environment can support the routed Codex workflow.
 
-- Git
-- Bun
-- a working Codex installation and login
+Required:
+
+- Git installed and available in the shell
+- Bun installed and available either on `PATH` or at `~/.bun/bin/bun`
+- Codex installed and logged in
 - write access to `~/.codex/skills/`
 - write access to `~/.kstack/`
 
-Recommended verification commands:
+Expected runtime context:
+
+- `kstack` is Codex-only
+- repositories should be git repos so branch-local workflow state can be stored at `.kstack/state/<branch>.json`
+- browser-driven QA depends on the local browser runtime generated during `bun run build`
+
+Quick verification:
 
 ```bash
 git --version
@@ -33,276 +27,157 @@ codex --version
 codex login
 ```
 
-If `bun` is already on your PATH, `bun --version` is enough.
-
-## Global Installation
-
-This is the normal installation mode. It installs one public Codex skill root:
-
-```text
-~/.codex/skills/kstack
-```
-
-All KStack operations are then invoked as `/kstack <subcommand>`.
-
-### 1. Clone the repo
+## Global Install
 
 ```bash
-git clone https://github.com/krzysztofcelmer/kstack.git ~/.codex/skills-src/kstack
+git clone https://github.com/kriscelmer/kstack.git ~/.codex/skills-src/kstack
 cd ~/.codex/skills-src/kstack
-```
-
-### 2. Install dependencies
-
-```bash
-~/.bun/bin/bun install
-```
-
-If `bun` is on PATH:
-
-```bash
 bun install
-```
-
-### 3. Build runtime artifacts
-
-```bash
 BUN_BIN="${BUN_BIN:-$HOME/.bun/bin/bun}" "$BUN_BIN" run build
-```
-
-This generates:
-
-- compiled browse binaries under `browse/dist/`
-- compiled `kstack-state` under `bin/kstack-state`
-- compiled `kstack-init` under `bin/kstack-init`
-- generated skill docs in the repo
-- generated Codex runtime files under `.agents/skills/kstack/`
-
-### 4. Install into Codex
-
-```bash
 ./setup
 ```
 
-This creates or updates:
+What this does:
 
-- `~/.codex/skills/kstack`
-- `~/.kstack/`
-
-### 5. Verify installation
-
-Check that the runtime exists:
-
-```bash
-ls ~/.codex/skills/kstack
-```
-
-Check local health:
-
-```bash
-BUN_BIN="${BUN_BIN:-$HOME/.bun/bin/bun}" "$BUN_BIN" test
-BUN_BIN="${BUN_BIN:-$HOME/.bun/bin/bun}" "$BUN_BIN" run skill:check
-```
-
-Then verify the command surface inside Codex:
-
-1. Open a new Codex thread in any repo.
-2. Run `/kstack`.
-3. Confirm that it behaves like help and lists the available subcommands.
-
-## First Use In A New Repo
-
-Installing KStack globally only makes the routed skill available. It does not automatically bootstrap each repository you work on.
-
-For a new project repo:
-
-### 1. Create the repo
-
-```bash
-mkdir my-new-project
-cd my-new-project
-git init
-```
-
-### 2. Add the repo to Codex App
-
-Open the repo as a project in Codex App so Codex can operate inside the repo root.
-
-### 3. Bootstrap repo-local workflow guidance
-
-Run:
-
-```text
-/kstack init
-```
-
-That command:
-
-- creates or switches the unborn branch to `main` if the repo has no commits yet
-- ensures `.kstack/state/` exists for the current branch
-- ensures `.kstack/reports/` exists
-- writes or updates a managed KStack block in repo-local `AGENTS.md`
-- tells Codex that workflow truth lives in `.kstack/state/<branch>.json`
-- prints the next steps for discovery, sprint freeze, and implementation
-
-### 4. Start the normal workflow
-
-From there, the usual sequence is:
-
-```text
-/kstack discover
-/kstack sprint-freeze
-/kstack implement
-```
-
-If QA or user feedback changes the assumptions behind the sprint, use:
-
-```text
-/kstack ingest-learning
-```
-
-Then refresh the sprint if needed:
-
-```text
-/kstack sprint-freeze
-```
+- installs dependencies
+- generates `SKILL.md` outputs
+- builds the browser runtime and state CLI
+- links the public runtime to `~/.codex/skills/kstack`
 
 ## Repo-Local Development Install
 
-Use this when hacking on `kstack` itself or when testing a local branch without touching your global Codex install.
-
-From the repo root:
+Use this when you want to test the current checkout directly:
 
 ```bash
+cd /path/to/kstack
 bun install
 bun run build
 ./setup --local --force
 ```
 
-That installs into:
+This writes the runtime under:
 
 ```text
-<repo>/.codex/skills/
+/path/to/kstack/.codex/skills/kstack
 ```
 
-This is useful when:
+## First Use In a New Repo
 
-- testing a feature branch of `kstack`
-- developing templates
-- iterating on `kstack-state`
-- verifying setup behavior in isolation
+Once KStack is installed globally:
 
-## Reinstalling After Pulling Changes
+1. create or clone a git repo
+2. add the repo to Codex App
+3. run `/kstack`
+4. run `/kstack init`
 
-If you update the checkout:
+`/kstack init` will:
 
-```bash
-git pull
-BUN_BIN="${BUN_BIN:-$HOME/.bun/bin/bun}" "$BUN_BIN" run build
-./setup --force
-```
+- create `.kstack/state/`
+- create `.kstack/reports/`
+- create `.kstack/contracts/`
+- add or update repo-local `AGENTS.md` guidance
+- create or switch to unborn `main` in an empty repo
 
-## Upgrading From an Older gstack Install
-
-If you previously used `gstack`:
-
-1. keep the old install around temporarily
-2. install `kstack`
-3. let `kstack` read legacy `.gstack` state only as fallback during migration
-4. stop writing new workflow data to `.gstack`
-
-`kstack` setup also copies `~/.gstack/config.yaml` into `~/.kstack/config.yaml` if the new config file does not exist yet.
-
-## Recommended GitHub Settings
-
-For repositories that use KStack as the execution-contract layer:
-
-- protect `main`
-- merge through pull requests only
-- require approving reviews
-- require these checks:
-  - `Workflow Lint`
-  - `Skill Docs Freshness`
-  - `E2E Evals`
-  - `kstack-ready`
-
-KStack does not try to enforce those repository settings from inside the repo. They remain repository policy.
-
-## Uninstall
-
-To remove the installed Codex runtime and global state:
-
-```bash
-bin/kstack-uninstall --force
-```
-
-To keep `~/.kstack/` but remove the installed skills:
-
-```bash
-bin/kstack-uninstall --force --keep-state
-```
-
-## Troubleshooting
-
-### Bun is installed, but `bun` is not found
-
-Use the absolute path:
-
-```bash
-~/.bun/bin/bun --version
-```
-
-Then run:
-
-```bash
-BUN_BIN="$HOME/.bun/bin/bun" "$BUN_BIN" run build
-```
-
-### `./setup` cannot find Bun
-
-Set `BUN_BIN` explicitly:
-
-```bash
-BUN_BIN="$HOME/.bun/bin/bun" ./setup
-```
-
-### `.agents/skills/` cannot be regenerated
-
-This usually means the working directory or sandbox context cannot write generated runtime files. Re-run the build from a shell with normal repo write access:
-
-```bash
-BUN_BIN="${BUN_BIN:-$HOME/.bun/bin/bun}" "$BUN_BIN" run build
-```
-
-### Skills are installed but not showing up in Codex
-
-Verify the directories exist:
-
-```bash
-ls ~/.codex/skills
-```
-
-Then re-run:
-
-```bash
-./setup --force
-```
-
-If the install is correct but the old direct commands still appear in your mental model, remember that KStack is now routed through one public skill:
+After that, the normal flow is:
 
 ```text
-/kstack
-/kstack help
 /kstack discover
 /kstack sprint-freeze
 /kstack implement
 ```
 
-### I changed templates but Codex still sees old skill content
+## Verification
 
-Regenerate and reinstall:
+Run:
 
 ```bash
-BUN_BIN="${BUN_BIN:-$HOME/.bun/bin/bun}" "$BUN_BIN" run build
+cd ~/.codex/skills-src/kstack
+bun run build
+bun test
+bun run skill:check
+```
+
+Expected outcomes:
+
+- build succeeds
+- tests pass
+- skill generation is fresh
+- `.agents/skills/kstack/` contains only the supported routed command set
+
+## Updating
+
+KStack updates are a shell workflow:
+
+```bash
+cd ~/.codex/skills-src/kstack
+git pull --ff-only
+bun install
+bun run build
 ./setup --force
 ```
+
+After updating:
+
+1. open a fresh Codex thread
+2. run `/kstack`
+3. confirm the help output reflects the current command surface
+
+For the KStack repository itself, keep the committed self-hosting baseline fresh after updates:
+
+```bash
+cd ~/.codex/skills-src/kstack
+bun run bin/kstack-state.ts export-contract --check --branch main
+bun run bin/kstack-state.ts verify-self-hosting
+```
+
+## Uninstall
+
+```bash
+cd ~/.codex/skills-src/kstack
+bin/kstack-uninstall --force
+```
+
+Add `--keep-state` if you want to preserve `~/.kstack/`.
+
+`kstack-uninstall` does not remove committed repo artifacts such as `.kstack/state/main.json` or `.kstack/contracts/` by default.
+
+## Troubleshooting
+
+### `bun` not found
+
+Install Bun and re-run the build:
+
+```bash
+curl -fsSL https://bun.sh/install | bash
+exec zsh -l
+```
+
+### The browser runtime is missing
+
+Rebuild from the source checkout:
+
+```bash
+cd ~/.codex/skills-src/kstack
+bun run build
+```
+
+### `/kstack` shows stale help
+
+Re-run setup and open a new Codex thread:
+
+```bash
+cd ~/.codex/skills-src/kstack
+./setup --force
+```
+
+### Repo state looks out of sync with chat
+
+The workflow source of truth is not the chat thread. Inspect:
+
+```bash
+bin/kstack-state summary
+bin/kstack-state show
+bin/kstack-state ready
+```
+
+If the plan changed, record it with `/kstack ingest-learning` and refresh `/kstack sprint-freeze` if needed.

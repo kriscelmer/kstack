@@ -2,23 +2,10 @@
 
 import * as fs from 'node:fs';
 import * as path from 'node:path';
-import { COMMAND_DESCRIPTIONS } from '../browse/src/commands';
-import { SNAPSHOT_FLAGS } from '../browse/src/snapshot';
-import { discoverTemplates } from './discover-skills';
+import { PUBLIC_ROUTED_COMMANDS, REGISTERED_SKILL_TEMPLATES, ROOT_SKILL_TEMPLATE, RUNTIME_SHARED_ASSETS } from '../lib/command-registry';
 
 const ROOT = path.resolve(import.meta.dir, '..');
 const DRY_RUN = process.argv.includes('--dry-run');
-const HOST_ARG = process.argv.find((arg) => arg === '--host' || arg.startsWith('--host='));
-const HOST = (() => {
-  if (!HOST_ARG) return 'codex';
-  if (HOST_ARG.includes('=')) return HOST_ARG.split('=')[1];
-  const idx = process.argv.indexOf(HOST_ARG);
-  return process.argv[idx + 1] || 'codex';
-})();
-
-if (!['codex', 'agents'].includes(HOST)) {
-  throw new Error(`Unsupported host "${HOST}". kstack only generates Codex-native skills.`);
-}
 
 const GENERATED_HEADER = (source: string) =>
   `<!-- AUTO-GENERATED from ${source} — do not edit directly -->\n<!-- Regenerate: bun run gen:skill-docs -->\n`;
@@ -83,32 +70,6 @@ policy:
 `;
 }
 
-function renderCommandReference(): string {
-  const grouped = new Map<string, Array<[string, (typeof COMMAND_DESCRIPTIONS)[string]]>>();
-  for (const [command, meta] of Object.entries(COMMAND_DESCRIPTIONS)) {
-    const list = grouped.get(meta.category) || [];
-    list.push([command, meta]);
-    grouped.set(meta.category, list);
-  }
-
-  const sections = [...grouped.entries()]
-    .sort(([left], [right]) => left.localeCompare(right))
-    .map(([category, entries]) => {
-      const rows = entries
-        .sort(([left], [right]) => left.localeCompare(right))
-        .map(([command, meta]) => `| \`${meta.usage || command}\` | ${meta.description} |`)
-        .join('\n');
-      return `### ${category}\n| Command | Description |\n| --- | --- |\n${rows}`;
-    });
-
-  return sections.join('\n\n');
-}
-
-function renderSnapshotFlags(): string {
-  const rows = SNAPSHOT_FLAGS.map((flag) => `| \`${flag.short}\` | \`${flag.long}\` | ${flag.description} |`).join('\n');
-  return `| Short | Long | Description |\n| --- | --- | --- |\n${rows}`;
-}
-
 function renderRuntimeSnippet(): string {
   return [
     '```bash',
@@ -128,8 +89,13 @@ function renderStateCli(): string {
     '# Show the canonical repo-local workflow state for the current branch',
     '$KSTACK_STATE summary',
     '',
-    '# Inspect or patch specific records',
+    '# Inspect the current state and branch contract',
     '$KSTACK_STATE show',
+    '$KSTACK_STATE export-contract',
+    '$KSTACK_STATE export-pr',
+    '$KSTACK_STATE ready --json',
+    '',
+    '# Advanced state mutation and routing helpers',
     '$KSTACK_STATE set-intent ./intent.json',
     '$KSTACK_STATE set-sprint ./sprint.json',
     '$KSTACK_STATE append-delta ./delta.json',
@@ -143,8 +109,9 @@ function renderWorkflowPrecedence(): string {
   return [
     '1. `code`, `tests`, and `config` are the source of truth for behavior.',
     '2. `.kstack/state/<branch>.json` is the source of truth for workflow intent, sprint scope, routing, and findings.',
-    '3. `.kstack/reports/` contains human-readable projections derived from code plus state.',
-    '4. Conversation context is advisory. If it conflicts with code or state, update the state instead of carrying stale prose forward.',
+    '3. `.kstack/contracts/<branch>.json` contains durable, committable branch contract projections.',
+    '4. `.kstack/reports/` contains human-readable projections derived from code plus state.',
+    '5. Conversation context is advisory. If it conflicts with code or state, update the state instead of carrying stale prose forward.',
   ].join('\n');
 }
 
@@ -159,16 +126,13 @@ function renderRoutingRules(): string {
   ].join('\n');
 }
 
-function buildSkillIndex(templates: Array<{ tmpl: string }>): string {
-  const rows = templates
-    .filter(({ tmpl }) => tmpl !== 'SKILL.md.tmpl')
-    .map(({ tmpl }) => {
-      const relDir = path.dirname(tmpl);
+function buildSkillIndex(): string {
+  const rows = PUBLIC_ROUTED_COMMANDS
+    .map(({ name, tmpl }) => {
       const frontmatter = extractFrontmatter(readText(path.join(ROOT, tmpl)));
       const firstSentence = frontmatter.description.split('. ')[0]?.trim() || frontmatter.description;
-      return { command: `/kstack ${relDir}`, summary: firstSentence.endsWith('.') ? firstSentence : `${firstSentence}.` };
+      return { command: `/kstack ${name}`, summary: firstSentence.endsWith('.') ? firstSentence : `${firstSentence}.` };
     })
-    .sort((left, right) => left.command.localeCompare(right.command))
     .map(({ command, summary }) => `| \`${command}\` | ${summary} |`)
     .join('\n');
 
@@ -228,28 +192,14 @@ function linkOrCopy(source: string, target: string): void {
   }
 }
 
-function materializeRuntimeRoot(templates: Array<{ tmpl: string }>): void {
+function materializeRuntimeRoot(): void {
   if (DRY_RUN) return;
 
   const runtimeRoot = path.join(ROOT, '.agents', 'skills', 'kstack');
   ensureDir(runtimeRoot);
 
-  const skillDirs = templates
-    .map(({ tmpl }) => path.dirname(tmpl))
-    .filter((dir) => dir !== '.');
-
-  const assets = [
-    'bin',
-    'browse',
-    'README.md',
-    'ARCHITECTURE.md',
-    'AGENTS.md',
-    'CLAUDE.md',
-    'VERSION',
-    'CHANGELOG.md',
-    'docs',
-    ...skillDirs,
-  ];
+  const skillDirs = PUBLIC_ROUTED_COMMANDS.map(({ tmpl }) => path.dirname(tmpl));
+  const assets = [...RUNTIME_SHARED_ASSETS, ...skillDirs];
   for (const asset of assets) {
     const source = path.join(ROOT, asset);
     if (!fs.existsSync(source)) continue;
@@ -270,14 +220,12 @@ function removeStaleGeneratedSkills(expected: Set<string>): void {
   }
 }
 
-const templates = discoverTemplates(ROOT);
+const templates = REGISTERED_SKILL_TEMPLATES;
 const replacements = {
   KSTACK_RUNTIME: renderRuntimeSnippet(),
   STATE_CLI: renderStateCli(),
   WORKFLOW_PRECEDENCE: renderWorkflowPrecedence(),
-  SKILL_INDEX: buildSkillIndex(templates),
-  COMMAND_REFERENCE: renderCommandReference(),
-  SNAPSHOT_FLAGS: renderSnapshotFlags(),
+  SKILL_INDEX: buildSkillIndex(),
   ROUTING_RULES: renderRoutingRules(),
 };
 
@@ -292,7 +240,7 @@ for (const { tmpl, output } of templates) {
   const changed = writeFileIfChanged(path.join(ROOT, output), finalContent);
   results.push(`${changed ? 'STALE' : 'FRESH'}: ${output}`);
 
-  if (tmpl === 'SKILL.md.tmpl') {
+  if (tmpl === ROOT_SKILL_TEMPLATE.tmpl) {
     const agentSkillPath = path.join(ROOT, '.agents', 'skills', 'kstack', 'SKILL.md');
     const agentYamlPath = path.join(ROOT, '.agents', 'skills', 'kstack', 'agents', 'openai.yaml');
     const fm = extractFrontmatter(rendered);
@@ -303,7 +251,7 @@ for (const { tmpl, output } of templates) {
 }
 
 removeStaleGeneratedSkills(expectedSkillDirs);
-materializeRuntimeRoot(templates);
+materializeRuntimeRoot();
 
 for (const line of results) {
   console.log(line);

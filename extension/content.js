@@ -1,5 +1,5 @@
 /**
- * gstack browse — content script
+ * kstack browse — content script
  *
  * Receives ref data from background worker via chrome.runtime.onMessage.
  * Renders @ref overlay badges on the page (CDP mode only — positions are accurate).
@@ -18,7 +18,7 @@ function showStatusPill(connected, refs) {
 
   if (!statusPill) {
     statusPill = document.createElement('div');
-    statusPill.id = 'gstack-status-pill';
+    statusPill.id = 'kstack-status-pill';
     statusPill.style.cursor = 'pointer';
     statusPill.addEventListener('click', () => {
       // Ask background to open the side panel
@@ -33,7 +33,7 @@ function showStatusPill(connected, refs) {
   }
 
   const refText = refCount > 0 ? ` · ${refCount} refs` : '';
-  statusPill.innerHTML = `<span class="gstack-pill-dot"></span> gstack${refText}`;
+  statusPill.innerHTML = `<span class="kstack-pill-dot"></span> kstack${refText}`;
   statusPill.style.display = 'flex';
   statusPill.style.opacity = '1';
 
@@ -53,7 +53,7 @@ function hideStatusPill() {
 function ensureContainer() {
   if (overlayContainer) return overlayContainer;
   overlayContainer = document.createElement('div');
-  overlayContainer.id = 'gstack-ref-overlays';
+  overlayContainer.id = 'kstack-ref-overlays';
   overlayContainer.style.cssText = 'position: fixed; top: 0; left: 0; width: 0; height: 0; z-index: 2147483647; pointer-events: none;';
   document.body.appendChild(overlayContainer);
   return overlayContainer;
@@ -76,7 +76,7 @@ function renderRefBadges(refs) {
     // In CDP mode, we could use bounding boxes from the server
     // For now, use a floating panel approach
     const badge = document.createElement('div');
-    badge.className = 'gstack-ref-badge';
+    badge.className = 'kstack-ref-badge';
     badge.textContent = ref.ref;
     badge.title = `${ref.role}: "${ref.name}"`;
     container.appendChild(badge);
@@ -90,34 +90,34 @@ function renderRefPanel(refs) {
   const container = ensureContainer();
 
   const panel = document.createElement('div');
-  panel.className = 'gstack-ref-panel';
+  panel.className = 'kstack-ref-panel';
 
   const header = document.createElement('div');
-  header.className = 'gstack-ref-panel-header';
-  header.textContent = `gstack refs (${refs.length})`;
+  header.className = 'kstack-ref-panel-header';
+  header.textContent = `kstack refs (${refs.length})`;
   header.style.cssText = 'pointer-events: auto; cursor: move;';
   panel.appendChild(header);
 
   const list = document.createElement('div');
-  list.className = 'gstack-ref-panel-list';
+  list.className = 'kstack-ref-panel-list';
   for (const ref of refs.slice(0, 30)) { // Show max 30 in panel
     const row = document.createElement('div');
-    row.className = 'gstack-ref-panel-row';
+    row.className = 'kstack-ref-panel-row';
     const idSpan = document.createElement('span');
-    idSpan.className = 'gstack-ref-panel-id';
+    idSpan.className = 'kstack-ref-panel-id';
     idSpan.textContent = ref.ref;
     const roleSpan = document.createElement('span');
-    roleSpan.className = 'gstack-ref-panel-role';
+    roleSpan.className = 'kstack-ref-panel-role';
     roleSpan.textContent = ref.role;
     const nameSpan = document.createElement('span');
-    nameSpan.className = 'gstack-ref-panel-name';
+    nameSpan.className = 'kstack-ref-panel-name';
     nameSpan.textContent = '"' + ref.name + '"';
     row.append(idSpan, document.createTextNode(' '), roleSpan, document.createTextNode(' '), nameSpan);
     list.appendChild(row);
   }
   if (refs.length > 30) {
     const more = document.createElement('div');
-    more.className = 'gstack-ref-panel-more';
+    more.className = 'kstack-ref-panel-more';
     more.textContent = `+${refs.length - 30} more`;
     list.appendChild(more);
   }

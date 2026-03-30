@@ -1,4 +1,4 @@
 interface:
-  display_name: "gstack"
-  short_description: "Bundle of gstack Codex skills"
-  default_prompt: "Use $gstack to locate the bundled gstack skills."
+  display_name: "kstack"
+  short_description: "Bundle of KStack Codex skills"
+  default_prompt: "Use /kstack to route into the bundled KStack workflow."

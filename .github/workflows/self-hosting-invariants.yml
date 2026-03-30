@@ -1,0 +1,19 @@
+name: Self-Hosting Invariants
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: oven-sh/setup-bun@v2
+
+      - name: Install dependencies
+        run: bun install
+
+      - name: Verify self-hosting invariants
+        run: bun run bin/kstack-state.ts verify-self-hosting

@@ -440,7 +440,7 @@ async function main() {
   const args = process.argv.slice(2);
 
   if (args.length === 0 || args[0] === '--help' || args[0] === '-h') {
-    console.log(`gstack browse — Fast headless browser for AI coding agents
+    console.log(`kstack browse — Fast headless browser for AI coding agents
 
 Usage: browse <command> [args...]
 
@@ -539,14 +539,13 @@ Refs:           After 'snapshot', use @e1, @e2... as selectors:
     // Delete stale state file
     try { fs.unlinkSync(config.stateFile); } catch {}
 
-    console.log('Launching headed Chromium with extension + sidebar agent...');
+    console.log('Launching headed Chromium with extension...');
     try {
       // Start server in headed mode with extension auto-loaded
       // Use a well-known port so the Chrome extension auto-connects
       const serverEnv: Record<string, string> = {
         BROWSE_HEADED: '1',
         BROWSE_PORT: '34567',
-        BROWSE_SIDEBAR_CHAT: '1',
       };
       const newState = await startServer(serverEnv);
 
@@ -562,51 +561,6 @@ Refs:           After 'snapshot', use @e1, @e2... as selectors:
       });
       const status = await resp.text();
       console.log(`Connected to real Chrome\n${status}`);
-
-      // Auto-start sidebar agent
-      // __dirname is inside $bunfs in compiled binaries — resolve from execPath instead
-      let agentScript = path.resolve(__dirname, 'sidebar-agent.ts');
-      if (!fs.existsSync(agentScript)) {
-        agentScript = path.resolve(path.dirname(process.execPath), '..', 'src', 'sidebar-agent.ts');
-      }
-      try {
-        if (!fs.existsSync(agentScript)) {
-          throw new Error(`sidebar-agent.ts not found at ${agentScript}`);
-        }
-        // Clear old agent queue
-        const agentQueue = path.join(process.env.HOME || '/tmp', '.kstack', 'sidebar-agent-queue.jsonl');
-        try { fs.writeFileSync(agentQueue, ''); } catch {}
-
-        // Resolve browse binary path the same way — execPath-relative
-        let browseBin = path.resolve(__dirname, '..', 'dist', 'browse');
-        if (!fs.existsSync(browseBin)) {
-          browseBin = process.execPath; // the compiled binary itself
-        }
-
-        // Kill any existing sidebar-agent processes before starting a new one.
-        // Old agents have stale auth tokens and will silently fail to relay events,
-        // causing the server to mark the agent as "hung".
-        try {
-          const { spawnSync } = require('child_process');
-          spawnSync('pkill', ['-f', 'sidebar-agent\\.ts'], { stdio: 'ignore', timeout: 3000 });
-        } catch {}
-
-        const agentProc = Bun.spawn(['bun', 'run', agentScript], {
-          cwd: config.projectDir,
-          env: {
-            ...process.env,
-            BROWSE_BIN: browseBin,
-            BROWSE_STATE_FILE: config.stateFile,
-            BROWSE_SERVER_PORT: String(newState.port),
-          },
-          stdio: ['ignore', 'ignore', 'ignore'],
-        });
-        agentProc.unref();
-        console.log(`[browse] Sidebar agent started (PID: ${agentProc.pid})`);
-      } catch (err: any) {
-        console.error(`[browse] Sidebar agent failed to start: ${err.message}`);
-        console.error(`[browse] Run manually: bun run ${agentScript}`);
-      }
     } catch (err: any) {
       console.error(`[browse] Connect failed: ${err.message}`);
       process.exit(1);

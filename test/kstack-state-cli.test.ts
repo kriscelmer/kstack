@@ -40,7 +40,7 @@ describe('kstack-state cli', () => {
       raw_request: 'Refactor to canonical state',
       user_pain_examples: ['Old plans drift'],
       goals: ['State-native workflow'],
-      non_goals: ['Claude compatibility'],
+      non_goals: ['Legacy assistant compatibility'],
       constraints: ['Keep browser QA'],
       hypotheses: ['Branch-local state is enough'],
       candidate_wedges: ['discover', 'sprint-freeze'],
@@ -121,12 +121,15 @@ describe('kstack-state cli', () => {
     const contractMarkdownPath = path.join(repoRoot, '.kstack', 'contracts', 'feature-ui-refresh.md');
     const contractJson = JSON.parse(fs.readFileSync(contractJsonPath, 'utf-8'));
     const prBody = run(['export-pr'], repoRoot);
+    const freshness = JSON.parse(run(['export-contract', '--check'], repoRoot));
 
     expect(exported.status).toBe('ready-to-ship');
     expect(fs.existsSync(contractJsonPath)).toBe(true);
     expect(fs.existsSync(contractMarkdownPath)).toBe(true);
     expect(contractJson.schema_version).toBe('branch-contract/v1');
+    expect(contractJson.state_file).toBe(path.join('.kstack', 'state', 'feature-ui-refresh.json'));
     expect(contractJson.readiness.status).toBe('ready-to-ship');
+    expect(freshness.ok).toBe(true);
     expect(prBody).toContain('## Branch Contract');
     expect(prBody).toContain('### Problem Statement');
 

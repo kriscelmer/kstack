@@ -162,7 +162,7 @@ This makes the system easier to evolve because the intelligence is not smeared a
 
 - the workflow should not model Codex as an external second opinion
 - the runtime, docs, setup, and commands should assume one primary host
-- compatibility only stays where migration cost is low
+- the product should describe its actual operating model instead of preserving old host abstractions
 
 That reduces both technical complexity and conceptual complexity.
 

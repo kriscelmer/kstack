@@ -31,17 +31,15 @@ describe('workflow-state', () => {
     expect(getCurrentBranch(repoRoot)).toBe('trunk');
   });
 
-  test('creates canonical state and records legacy migration sources', () => {
+  test('creates canonical state without legacy migration fallbacks', () => {
     const repoRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'kstack-state-'));
-    fs.mkdirSync(path.join(repoRoot, '.gstack'), { recursive: true });
-    fs.writeFileSync(path.join(repoRoot, '.gstack', 'browse.json'), '{}');
 
     const paths = resolveWorkflowPaths(repoRoot);
     const state = ensureWorkflowState(paths, 'test.ensure');
 
     expect(fs.existsSync(paths.stateFile)).toBe(true);
     expect(state.schema_version).toBe('workflow-state/v1');
-    expect(state.provenance.migrated_from).toContain(path.join(repoRoot, '.gstack', 'browse.json'));
+    expect(state.provenance.migrated_from).toEqual([]);
   });
 
   test('updates intent, sprint, delta, and findings in one canonical object', () => {

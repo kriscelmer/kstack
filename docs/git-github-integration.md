@@ -84,6 +84,13 @@ These are low-noise summaries derived from the raw state. They are meant for:
 - semantic readiness checks
 - auditability in Git history
 
+For self-hosted KStack itself:
+
+- `main` keeps only `.kstack/state/main.json`
+- feature branches may commit raw `.kstack/state/<feature>.json` while active
+- raw feature-branch state must be removed before merge
+- committed `.kstack/contracts/<branch>.json` and `.md` remain after merge as the durable history of that branch contract
+
 ## Pull Requests
 
 In the GitHub model:
@@ -138,7 +145,7 @@ For repositories using KStack:
 - require these checks:
   - `Workflow Lint`
   - `Skill Docs Freshness`
-  - `E2E Evals`
+  - `Repository Validation`
   - `kstack-ready`
 
 Recommended `CODEOWNERS` coverage:
@@ -169,6 +176,7 @@ git checkout -b feat/my-change
   -> /kstack ingest-learning (if assumptions changed)
   -> /kstack sprint-freeze again (if needed)
   -> /kstack ship
+  -> remove raw .kstack/state/<feature>.json before merge
   -> merge PR
 ```
 

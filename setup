@@ -59,7 +59,7 @@ if [ "$FORCE" -eq 0 ]; then
   esac
 fi
 
-mkdir -p "$HOME/.kstack" "$HOME/.kstack/projects" "$CODEX_SKILLS"
+mkdir -p "$HOME/.kstack" "$CODEX_SKILLS"
 
 if [ ! -x "$BUN_BIN" ]; then
   echo "bun not found. Set BUN_BIN or add bun to PATH." >&2
@@ -77,18 +77,7 @@ fi
 
 mkdir -p "$REPO_ROOT/.agents/skills/kstack"
 
-# Remove legacy direct subcommand installs. KStack is now routed via `/kstack ...`.
-for tmpl in "$REPO_ROOT"/*/SKILL.md.tmpl; do
-  [ -f "$tmpl" ] || continue
-  skill_name="$(basename "$(dirname "$tmpl")")"
-  rm -rf "$CODEX_SKILLS/$skill_name"
-done
-
 ln -snf "$REPO_ROOT/.agents/skills/kstack" "$CODEX_SKILLS/kstack"
-
-if [ -f "$HOME/.gstack/config.yaml" ] && [ ! -f "$HOME/.kstack/config.yaml" ]; then
-  cp "$HOME/.gstack/config.yaml" "$HOME/.kstack/config.yaml"
-fi
 
 touch "$HOME/.kstack/.welcome-seen"
 

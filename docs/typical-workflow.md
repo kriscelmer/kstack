@@ -27,6 +27,13 @@ The preferred branch model is:
 2. keep one active intent and one active sprint on that branch
 3. if the work splits into two independent directions, split the branches too
 
+For KStack working on itself:
+
+- `main` keeps only `.kstack/state/main.json`
+- feature branches may carry raw `.kstack/state/<branch>.json` while they are active
+- raw feature-branch state must be removed before merge
+- committed `.kstack/contracts/<branch>.json` and `.md` remain after merge
+
 ## Example Scenario
 
 Assume the user says:
@@ -202,6 +209,7 @@ user request
   -> implementation continues
   -> /kstack document-release
   -> /kstack ship
+  -> remove raw feature-branch state before merge
 ```
 
 ## Anti-Patterns

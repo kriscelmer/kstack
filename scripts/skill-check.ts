@@ -3,12 +3,33 @@
 import * as fs from 'node:fs';
 import * as os from 'node:os';
 import * as path from 'node:path';
-import { discoverTemplates, discoverSkillFiles } from './discover-skills';
+import { REGISTERED_SKILL_OUTPUTS, REGISTERED_SKILL_TEMPLATES, REGISTERED_TEMPLATE_PATHS, ROOT_SKILL_TEMPLATE } from '../lib/command-registry';
 
 const ROOT = path.resolve(import.meta.dir, '..');
 const BUN = process.env.BUN_BIN || (fs.existsSync(path.join(os.homedir(), '.bun', 'bin', 'bun')) ? path.join(os.homedir(), '.bun', 'bin', 'bun') : 'bun');
-const templates = discoverTemplates(ROOT);
-const skills = discoverSkillFiles(ROOT);
+const templates = REGISTERED_SKILL_TEMPLATES;
+
+function discoverSkillArtifacts(root: string, basename: 'SKILL.md' | 'SKILL.md.tmpl'): string[] {
+  const results: string[] = [];
+
+  if (fs.existsSync(path.join(root, basename))) {
+    results.push(basename);
+  }
+
+  for (const entry of fs.readdirSync(root, { withFileTypes: true })) {
+    if (!entry.isDirectory()) continue;
+    if (entry.name.startsWith('.')) continue;
+    const relPath = path.join(entry.name, basename);
+    if (fs.existsSync(path.join(root, relPath))) {
+      results.push(relPath);
+    }
+  }
+
+  return results.sort();
+}
+
+const skills = discoverSkillArtifacts(ROOT, 'SKILL.md');
+const discoveredTemplates = discoverSkillArtifacts(ROOT, 'SKILL.md.tmpl');
 
 function extractFrontmatter(content: string): { name: string; description: string } | null {
   if (!content.startsWith('---\n')) return null;
@@ -32,6 +53,24 @@ let failed = false;
 
 console.log('kstack skill health');
 console.log('');
+
+for (const tmpl of discoveredTemplates) {
+  if (!REGISTERED_TEMPLATE_PATHS.has(tmpl)) {
+    failed = true;
+    console.log(`FAIL  ${tmpl}  not part of the registered public KStack surface`);
+  }
+}
+
+for (const file of skills) {
+  if (!REGISTERED_SKILL_OUTPUTS.has(file)) {
+    failed = true;
+    console.log(`FAIL  ${file}  not part of the registered public KStack surface`);
+  }
+}
+
+if (failed) {
+  console.log('');
+}
 
 for (const file of skills) {
   const fullPath = path.join(ROOT, file);
@@ -73,7 +112,7 @@ console.log('');
 console.log('generated Codex runtime');
 for (const { tmpl } of templates) {
   const dir = path.dirname(tmpl);
-  const target = dir === '.'
+  const target = tmpl === ROOT_SKILL_TEMPLATE.tmpl
     ? path.join(ROOT, '.agents', 'skills', 'kstack', 'SKILL.md')
     : path.join(ROOT, '.agents', 'skills', 'kstack', dir, 'SKILL.md');
   if (!fs.existsSync(target)) {

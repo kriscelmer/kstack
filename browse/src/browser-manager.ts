@@ -208,8 +208,8 @@ export class BrowserManager {
    * is required for extension loading (launch() + newContext() can't
    * load extensions).
    *
-   * The browser launches headed with a visible window — the user sees
-   * every action Claude takes in real time.
+   * The browser launches headed with a visible window so users can watch
+   * the shared QA/browser session in real time.
    */
   async launchHeaded(authToken?: string): Promise<void> {
     // Clear old state before repopulating
